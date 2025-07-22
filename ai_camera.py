@@ -1,10 +1,12 @@
 import subprocess
 import json
 import threading
+import time
 
 # Shared variable to hold latest objects
 latest_objects = []
 
+# Function to run object detection
 def run_object_detection():
     global latest_objects
 
@@ -21,7 +23,7 @@ def run_object_detection():
 
     try:
         for line in process.stdout:
-            print(line.strip())  # View raw output for debugging
+            print(line.strip())  # Optional: print raw output
 
             if '"objects":' in line:
                 try:
@@ -33,10 +35,34 @@ def run_object_detection():
                             confidence = obj.get("confidence", 0)
                             if label:
                                 new_objects.append({"label": label, "confidence": confidence})
-                        # Update shared data with latest detection
+                        # Update shared variable with new detection results
                         latest_objects = new_objects
                 except json.JSONDecodeError:
                     pass
 
     except KeyboardInterrupt:
         process.terminate()
+
+# Function to print latest detected objects every 5 seconds
+def print_latest_objects():
+    global latest_objects
+    while True:
+        print("\nCurrent detected objects:")
+        for obj in latest_objects:
+            print(f"{obj['label']} (confidence: {obj['confidence']:.2f})")
+        time.sleep(5)
+
+# Start the detection in a background thread
+detection_thread = threading.Thread(target=run_object_detection)
+detection_thread.start()
+
+# Start the print thread to monitor object detection
+printer_thread = threading.Thread(target=print_latest_objects, daemon=True)
+printer_thread.start()
+
+# Keep the main thread alive so both threads keep running
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("Stopping...")
