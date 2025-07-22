@@ -1,43 +1,42 @@
 import subprocess
 import json
+import threading
 
-# Command to run the AI model
-command = [
-    "rpicam-hello",
-    "-t", "0s",
-    "--post-process-file", "/usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json",
-    "--viewfinder-width", "1920",
-    "--viewfinder-height", "1080",
-    "--framerate", "30"
-]
+# Shared variable to hold latest objects
+latest_objects = []
 
-# Start process
-process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+def run_object_detection():
+    global latest_objects
 
-# Process the output line by line
-detected_objects = []
+    command = [
+        "rpicam-hello",
+        "-t", "0s",
+        "--post-process-file", "/usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json",
+        "--viewfinder-width", "1920",
+        "--viewfinder-height", "1080",
+        "--framerate", "30"
+    ]
 
-try:
-    for line in process.stdout:
-        print(line.strip())  # Optional: print to see raw output
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-        # Try to parse JSON if the output contains detection results
-        if '"objects":' in line:
-            try:
-                data = json.loads(line.strip())
-                if "objects" in data:
-                    for obj in data["objects"]:
-                        label = obj.get("label")
-                        confidence = obj.get("confidence", 0)
-                        if label:
-                            detected_objects.append((label, confidence))
-            except json.JSONDecodeError:
-                pass
+    try:
+        for line in process.stdout:
+            print(line.strip())  # View raw output for debugging
 
-except KeyboardInterrupt:
-    process.terminate()
+            if '"objects":' in line:
+                try:
+                    data = json.loads(line.strip())
+                    if "objects" in data:
+                        new_objects = []
+                        for obj in data["objects"]:
+                            label = obj.get("label")
+                            confidence = obj.get("confidence", 0)
+                            if label:
+                                new_objects.append({"label": label, "confidence": confidence})
+                        # Update shared data with latest detection
+                        latest_objects = new_objects
+                except json.JSONDecodeError:
+                    pass
 
-# Print final list of detected objects
-print("\nDetected objects:")
-for obj in detected_objects:
-    print(f"{obj[0]} (confidence: {obj[1]:.2f})")
+    except KeyboardInterrupt:
+        process.terminate()
