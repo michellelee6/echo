@@ -38,21 +38,24 @@ if __name__ == "__main__":
         outputs = imx500.get_outputs(metadata, add_batch=True)
 
         if outputs is None or len(outputs) < 3:
-            continue  # Need at least boxes, scores, classes
+            continue
 
         # Debug: print shapes of all outputs
         for i, output in enumerate(outputs):
             print(f"Output {i} shape: {output.shape}")
 
         try:
-            # Pass the entire outputs list/tuple to postprocess
             detections = postprocess_nanodet_detection(
                 outputs=outputs,
                 conf=args.threshold,
                 iou_thres=args.iou,
                 max_out_dets=args.max_detections,
-            )[0]
+            )
 
+            print("Detections output type:", type(detections))
+            print("Detections output repr:", repr(detections))
+
+            # Assuming detections is a tuple/list of (boxes, scores, classes)
             boxes, scores, classes = detections
 
             if len(boxes) > 0:
