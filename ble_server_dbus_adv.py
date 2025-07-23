@@ -92,7 +92,7 @@ class Advertisement(dbus.service.Object):
     def GetAll(self, interface):
         return {
             'Type': 'peripheral',
-            'LocalName': 'PiCam',
+            'LocalName': 'picam',  # Set device name here
             'ServiceUUIDs': dbus.Array(['12345678-1234-5678-1234-56789abcdef0'], signature='s'),
             'IncludeTxPower': dbus.Boolean(True)
         }
