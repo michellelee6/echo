@@ -52,11 +52,18 @@ if __name__ == "__main__":
                 max_out_dets=args.max_detections,
             )
 
-            print("Detections output type:", type(detections))
-            print("Detections output repr:", repr(detections))
+            print("Detections type:", type(detections))
+            print("Detections repr:", repr(detections))
 
-            # Assuming detections is a tuple/list of (boxes, scores, classes)
-            boxes, scores, classes = detections
+            # If detections is a list of tuples, pick the first
+            if isinstance(detections, list) or isinstance(detections, tuple):
+                if len(detections) > 0 and (isinstance(detections[0], tuple) or isinstance(detections[0], list)):
+                    boxes, scores, classes = detections[0]
+                else:
+                    boxes, scores, classes = detections
+            else:
+                print("Unexpected detections format")
+                continue
 
             if len(boxes) > 0:
                 for box, score, cls in zip(boxes, scores, classes):
