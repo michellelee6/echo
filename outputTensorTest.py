@@ -1,6 +1,4 @@
-import sys
 import argparse
-
 from picamera2 import Picamera2
 from picamera2.devices import IMX500
 from picamera2.devices.imx500 import postprocess_nanodet_detection, NetworkIntrinsics
@@ -8,7 +6,7 @@ from picamera2.devices.imx500 import postprocess_nanodet_detection, NetworkIntri
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk")
-    parser.add_argument("--threshold", type=float, default=0.55)
+    parser.add_argument("--threshold", type=float, default=0.1)  # lower threshold for testing
     parser.add_argument("--iou", type=float, default=0.65)
     parser.add_argument("--max-detections", type=int, default=10)
     parser.add_argument("--labels", type=str, default="assets/coco_labels.txt")
@@ -36,7 +34,10 @@ if __name__ == "__main__":
         outputs = imx500.get_outputs(metadata, add_batch=True)
 
         if outputs is None or len(outputs) == 0 or outputs[0].size == 0:
-            continue  # Skip silently if nothing detected
+            continue
+
+        print(f"Outputs shape: {outputs[0].shape}")
+        print(f"Raw outputs sample: {outputs[0].flatten()[:10]}")  # print first 10 floats as sample
 
         try:
             detections = postprocess_nanodet_detection(
@@ -45,12 +46,14 @@ if __name__ == "__main__":
                 iou_thres=args.iou,
                 max_out_dets=args.max_detections
             )[0]
-        except Exception:
-            continue  # Skip silently if postprocessing fails
 
-        boxes, scores, classes = detections
+            boxes, scores, classes = detections
+            print(f"Detections count: {len(boxes)}")
 
-        if len(boxes) > 0:
-            for box, score, cls in zip(boxes, scores, classes):
-                label = labels[int(cls)] if int(cls) < len(labels) else f"Class {int(cls)}"
-                print(f"Detected: {label}, Confidence: {score:.2f}")
+            if len(boxes) > 0:
+                for box, score, cls in zip(boxes, scores, classes):
+                    label = labels[int(cls)] if int(cls) < len(labels) else f"Class {int(cls)}"
+                    print(f"Detected: {label}, Confidence: {score:.2f}")
+
+        except Exception as e:
+            print(f"Post-processing error: {e}")
