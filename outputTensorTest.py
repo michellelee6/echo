@@ -36,26 +36,21 @@ if __name__ == "__main__":
         outputs = imx500.get_outputs(metadata, add_batch=True)
 
         if outputs is None or len(outputs) == 0 or outputs[0].size == 0:
-            print("Nothing detected (empty outputs)")
-            continue
+            continue  # Skip silently if nothing detected
 
         try:
-            # Some models wrap results in an extra batch dimension
             detections = postprocess_nanodet_detection(
                 outputs=outputs[0],
                 conf=args.threshold,
                 iou_thres=args.iou,
                 max_out_dets=args.max_detections
             )[0]
-        except Exception as e:
-            print(f"Post-processing error: {e}")
-            continue
+        except Exception:
+            continue  # Skip silently if postprocessing fails
 
         boxes, scores, classes = detections
 
-        if len(boxes) == 0:
-            print("Nothing detected")
-        else:
+        if len(boxes) > 0:
             for box, score, cls in zip(boxes, scores, classes):
                 label = labels[int(cls)] if int(cls) < len(labels) else f"Class {int(cls)}"
                 print(f"Detected: {label}, Confidence: {score:.2f}")
