@@ -152,6 +152,8 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     config = picam2.create_preview_configuration()
     picam2.start(config)
 
+    last_label_str = None  # 🧠 Track the last result sent
+
     while True:
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
@@ -163,19 +165,23 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
             detections = ssd_postprocess(outputs, threshold)
 
             if len(detections) == 0:
-                continue
+                current_label_str = "No objects detected"
+            else:
+                detected_labels = []
+                for box, score, cls in detections:
+                    label = labels[cls] if cls < len(labels) else f"Class {cls}"
+                    detected_labels.append(label)
+                current_label_str = ", ".join(detected_labels)
 
-            detected_labels = []
-            for box, score, cls in detections:
-                label = labels[cls] if cls < len(labels) else f"Class {cls}"
-                detected_labels.append(label)
-
-            label_str = ", ".join(detected_labels)
-            print(f"[BLE] Sending: {label_str}")
-            char.update_value(label_str)
+            # ✅ Only send if different from last update
+            if current_label_str != last_label_str:
+                print(f"[BLE] Sending: {current_label_str}")
+                char.update_value(current_label_str)
+                last_label_str = current_label_str
 
         except Exception as e:
             print(f"Detection error: {e}")
+
         time.sleep(1)
 
 def load_labels(path):
