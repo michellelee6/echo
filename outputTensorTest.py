@@ -11,8 +11,7 @@ def get_args():
     parser.add_argument("--threshold", type=float, default=0.55)
     parser.add_argument("--iou", type=float, default=0.65)
     parser.add_argument("--max-detections", type=int, default=10)
-    parser.add_argument("--labels", type=str, default="/usr/share/rpi-camera-assets/coco_labels.txt")
-
+    parser.add_argument("--labels", type=str, default="assets/coco_labels.txt")
     return parser.parse_args()
 
 def load_labels(path):
