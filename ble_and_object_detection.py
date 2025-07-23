@@ -30,7 +30,7 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
     @dbus.service.method("org.bluez.GattCharacteristic1", in_signature='', out_signature='ay')
     def ReadValue(self):
         print("[GATT] Read request")
-        return dbus.Array(self.value, signature='y')
+        return self.value
 
     @dbus.service.method("org.bluez.GattCharacteristic1", in_signature='', out_signature='')
     def StartNotify(self):
@@ -43,13 +43,15 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
         print("[GATT] Notifying stopped")
 
     def update_value(self, text):
-        self.value = [dbus.Byte(ord(c)) for c in text]
+        encoded = text.encode('utf-8')
+        self.value = dbus.Array([dbus.Byte(b) for b in encoded], signature='y')
         if self.notifying:
             self.PropertiesChanged("org.bluez.GattCharacteristic1", {"Value": self.value}, [])
 
     @dbus.service.signal("org.freedesktop.DBus.Properties", signature='sa{sv}as')
     def PropertiesChanged(self, interface, changed, invalidated):
         pass
+
 
 # GATT Service
 class ObjectDetectionService(dbus.service.Object):
