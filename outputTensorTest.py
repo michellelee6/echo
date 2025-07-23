@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/usr/share/rpi-camera-assets/imx500')
+
 from picamera2 import Picamera2
 from imx500 import IMX500
 
