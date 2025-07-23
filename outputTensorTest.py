@@ -21,45 +21,41 @@ def load_labels(path):
 if __name__ == "__main__":
     args = get_args()
 
-    # Initialize IMX500 and camera
     imx500 = IMX500(args.model)
     intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
     intrinsics.task = "object detection"
 
-    # Load labels
     labels = load_labels(args.labels)
 
-    # Set up camera
     picam2 = Picamera2(imx500.camera_num)
     config = picam2.create_preview_configuration()
     picam2.start(config)
 
-    print("Object detection started...")
-
     while True:
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
-        if outputs is None:
-            print("No outputs from camera.")
+
+        if outputs is None or len(outputs) == 0 or outputs[0].size == 0:
+            print("Nothing detected (empty outputs)")
             continue
 
         try:
-            results = postprocess_nanodet_detection(
+            # Some models wrap results in an extra batch dimension
+            detections = postprocess_nanodet_detection(
                 outputs=outputs[0],
                 conf=args.threshold,
                 iou_thres=args.iou,
                 max_out_dets=args.max_detections
             )[0]
+        except Exception as e:
+            print(f"Post-processing error: {e}")
+            continue
 
-            boxes, scores, classes = results
+        boxes, scores, classes = detections
 
-            if boxes is None or len(boxes) == 0:
-                print("Nothing detected.")
-                continue
-
+        if len(boxes) == 0:
+            print("Nothing detected")
+        else:
             for box, score, cls in zip(boxes, scores, classes):
                 label = labels[int(cls)] if int(cls) < len(labels) else f"Class {int(cls)}"
                 print(f"Detected: {label}, Confidence: {score:.2f}")
-
-        except Exception as e:
-            print(f"Error during postprocessing: {e}")
