@@ -1,7 +1,8 @@
 import argparse
 from picamera2 import Picamera2
 from picamera2.devices import IMX500
-from picamera2.devices.imx500 import postprocess_nanodet_detection, NetworkIntrinsics
+from picamera2.devices.imx500 import NetworkIntrinsics
+import numpy as np
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -10,15 +11,26 @@ def get_args():
         type=str,
         default="/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk",
     )
-    parser.add_argument("--threshold", type=float, default=0.55)
-    parser.add_argument("--iou", type=float, default=0.65)
-    parser.add_argument("--max-detections", type=int, default=10)
+    parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--labels", type=str, default="assets/coco_labels.txt")
     return parser.parse_args()
 
 def load_labels(path):
     with open(path, "r") as f:
         return [line.strip() for line in f.readlines()]
+
+def ssd_postprocess(outputs, threshold):
+    boxes, classes, scores, num_detections = outputs
+    boxes = boxes[0]  # shape: (100, 4)
+    classes = classes[0].astype(int)  # shape: (100,)
+    scores = scores[0]  # shape: (100,)
+    num = int(num_detections[0][0])  # shape: (1,)
+
+    results = []
+    for i in range(num):
+        if scores[i] >= threshold:
+            results.append((boxes[i], scores[i], classes[i]))
+    return results
 
 if __name__ == "__main__":
     args = get_args()
@@ -37,38 +49,20 @@ if __name__ == "__main__":
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
 
-        if outputs is None or len(outputs) < 3:
+        if outputs is None or len(outputs) != 4:
+            print("Unexpected number of output tensors.")
             continue
 
-        # Debug: print shapes of all outputs
-        for i, output in enumerate(outputs):
-            print(f"Output {i} shape: {output.shape}")
-
         try:
-            detections = postprocess_nanodet_detection(
-                outputs=outputs,
-                conf=args.threshold,
-                iou_thres=args.iou,
-                max_out_dets=args.max_detections,
-            )
+            detections = ssd_postprocess(outputs, args.threshold)
 
-            print("Detections type:", type(detections))
-            print("Detections repr:", repr(detections))
-
-            # If detections is a list of tuples, pick the first
-            if isinstance(detections, list) or isinstance(detections, tuple):
-                if len(detections) > 0 and (isinstance(detections[0], tuple) or isinstance(detections[0], list)):
-                    boxes, scores, classes = detections[0]
-                else:
-                    boxes, scores, classes = detections
-            else:
-                print("Unexpected detections format")
+            if len(detections) == 0:
+                print("No objects detected.")
                 continue
 
-            if len(boxes) > 0:
-                for box, score, cls in zip(boxes, scores, classes):
-                    label = labels[int(cls)] if int(cls) < len(labels) else f"Class {int(cls)}"
-                    print(f"Detected: {label}, Confidence: {score:.2f}")
+            for box, score, cls in detections:
+                label = labels[cls] if cls < len(labels) else f"Class {cls}"
+                print(f"Detected: {label}, Confidence: {score:.2f}, Box: {box}")
 
         except Exception as e:
             print(f"Post-processing error: {e}")
