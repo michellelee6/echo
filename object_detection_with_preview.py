@@ -8,6 +8,8 @@ from picamera2.devices import IMX500
 from picamera2.devices.imx500 import NetworkIntrinsics
 import threading
 import time
+import subprocess
+import signal
 
 BLUEZ_SERVICE_NAME = 'org.bluez'
 GATT_MANAGER_IFACE = 'org.bluez.GattManager1'
@@ -15,8 +17,9 @@ LE_ADVERTISING_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
 DBUS_OM_IFACE = 'org.freedesktop.DBus.ObjectManager'
 
 MAIN_LOOP = None
+viewfinder_proc = None
 
-# GATT Characteristic
+# --- BLE/GATT Characteristic ---
 class ObjectDetectorCharacteristic(dbus.service.Object):
     PATH = '/org/bluez/example/service0/char0'
     UUID = '12345678-1234-5678-1234-56789abcdef1'
@@ -52,8 +55,7 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
     def PropertiesChanged(self, interface, changed, invalidated):
         pass
 
-
-# GATT Service
+# --- GATT Service ---
 class ObjectDetectionService(dbus.service.Object):
     PATH = '/org/bluez/example/service0'
     UUID = '12345678-1234-5678-1234-56789abcdef0'
@@ -62,7 +64,7 @@ class ObjectDetectionService(dbus.service.Object):
         dbus.service.Object.__init__(self, bus, self.PATH)
         self.char = ObjectDetectorCharacteristic(bus)
 
-# GATT Application
+# --- GATT Application ---
 class Application(dbus.service.Object):
     def __init__(self, bus):
         self.path = '/'
@@ -93,7 +95,7 @@ class Application(dbus.service.Object):
                 }
         return managed_objects
 
-# BLE Advertisement
+# --- BLE Advertisement ---
 class Advertisement(dbus.service.Object):
     PATH = '/org/bluez/example/advertisement0'
 
@@ -114,6 +116,7 @@ class Advertisement(dbus.service.Object):
     def Release(self):
         print('[BLE] Advertisement released')
 
+# --- Register Functions ---
 def register_app(bus, app):
     adapter = find_adapter()
     service_manager = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, adapter), GATT_MANAGER_IFACE)
@@ -135,7 +138,19 @@ def find_adapter():
             return path
     raise Exception("GATT Manager interface not found")
 
-# IMX500 detection + BLE sending
+# --- Start viewfinder as background process ---
+def start_viewfinder():
+    cmd = [
+        "rpicam-hello",
+        "-t", "0s",
+        "--post-process-file", "/usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json",
+        "--viewfinder-width", "1920",
+        "--viewfinder-height", "1080",
+        "--framerate", "30"
+    ]
+    return subprocess.Popen(cmd, preexec_fn=os.setsid)
+
+# --- IMX500 Detection + BLE ---
 def start_object_detection(char: ObjectDetectorCharacteristic):
     print("[INFO] Starting object detection using Picamera2 + IMX500")
 
@@ -152,9 +167,8 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     config = picam2.create_preview_configuration()
     picam2.configure(config)
     picam2.start()
-    picam2.start_preview()  # 🟢 This line shows the live preview window
 
-    last_label_str = None  # Store last unique label set
+    last_label_str = None
 
     while True:
         metadata = picam2.capture_metadata()
@@ -187,6 +201,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
         time.sleep(1)
 
+# --- Utilities ---
 def load_labels(path):
     with open(path, "r") as f:
         return [line.strip() for line in f.readlines()]
@@ -203,8 +218,10 @@ def ssd_postprocess(outputs, threshold):
             results.append((boxes[i], scores[i], classes[i]))
     return results
 
+# --- Main ---
+import os
 def main():
-    global MAIN_LOOP
+    global MAIN_LOOP, viewfinder_proc
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
     app = Application(bus)
@@ -213,13 +230,18 @@ def main():
     register_app(bus, app)
     register_advertisement(bus, adv)
 
+    # 🔵 Start the viewfinder before the object detection loop
+    viewfinder_proc = start_viewfinder()
+
     MAIN_LOOP = GLib.MainLoop()
     GLib.timeout_add(100, lambda: True)
 
-    # Start object detection in separate thread
-    threading.Thread(target=start_object_detection, args=(app.services[1],), daemon=True).start()
-
-    MAIN_LOOP.run()
+    try:
+        threading.Thread(target=start_object_detection, args=(app.services[1],), daemon=True).start()
+        MAIN_LOOP.run()
+    finally:
+        if viewfinder_proc:
+            os.killpg(os.getpgid(viewfinder_proc.pid), signal.SIGTERM)
 
 if __name__ == '__main__':
     main()
