@@ -1,21 +1,31 @@
-import serial
+import smbus2
 import time
 
-# Open the serial port (adjust if using different port)
-ser = serial.Serial("/dev/ttyAMA0", 115200)
+# TF-Luna I2C default address
+TF_LUNA_ADDR = 0x10
 
-def read_tf_luna():
-    while True:
-        if ser.in_waiting >= 9:
-            data = ser.read(9)
-            if data[0] == 0x59 and data[1] == 0x59:
-                distance = data[2] + data[3]*256
-                strength = data[4] + data[5]*256
-                print(f"Distance: {distance} cm, Strength: {strength}")
-        time.sleep(0.05)
+# Register to request data from
+FRAME_HEADER = 0x5A
+REGISTER = 0x00  # Start of frame
 
-try:
-    read_tf_luna()
-except KeyboardInterrupt:
-    ser.close()
-    print("Stopped.")
+# Use I2C bus 1 (default for Pi)
+bus = smbus2.SMBus(1)
+
+def read_distance():
+    try:
+        # Request 9 bytes from sensor
+        data = bus.read_i2c_block_data(TF_LUNA_ADDR, REGISTER, 9)
+
+        # Validate frame header
+        if data[0] == FRAME_HEADER and data[1] == FRAME_HEADER:
+            distance = data[2] + (data[3] << 8)
+            strength = data[4] + (data[5] << 8)
+            print(f"Distance: {distance} cm | Strength: {strength}")
+        else:
+            print("Invalid data header:", data)
+    except Exception as e:
+        print("Error reading from TF-Luna:", e)
+
+while True:
+    read_distance()
+    time.sleep(0.1)
