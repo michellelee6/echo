@@ -2,7 +2,7 @@ import serial
 import time
 
 # Open the serial port (adjust if using different port)
-ser = serial.Serial("/dev/serial0", 115200)
+ser = serial.Serial("/dev/ttyAMA0", 115200)
 
 def read_tf_luna():
     while True:
