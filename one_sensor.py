@@ -1,23 +1,30 @@
-import time
 import smbus2
+import time
 
-bus = smbus2.SMBus(1)
-I2C_ADDR = 0x10  # Change this if your address is different
+# I2C address of the TF-Luna (default is 0x10)
+I2C_ADDR = 0x10
+bus = smbus2.SMBus(1)  # Use I2C bus 1 on Raspberry Pi
 
-def read_tf_luna_raw(addr):
+def read_distance():
     try:
-        write = smbus2.i2c_msg.write(addr, [0x00])
-        read = smbus2.i2c_msg.read(addr, 9)
-        bus.i2c_rdwr(write, read)
-        data = list(read)
-        print("Raw:", data)
-        if data[0] == 0x59 and data[1] == 0x59:
-            return data[2] + data[3] * 256
-    except Exception as e:
-        print("Error:", e)
-    return None
+        while True:
+            # Request 9 bytes from the sensor
+            data = bus.read_i2c_block_data(I2C_ADDR, 0, 9)
 
-while True:
-    d = read_tf_luna_raw(I2C_ADDR)
-    print("Distance:", d, "cm")
-    time.sleep(0.2)
+            # Check frame header
+            if data[0] == 0x59 and data[1] == 0x59:
+                distance = data[2] + (data[3] << 8)      # in cm
+                strength = data[4] + (data[5] << 8)
+                temperature = (data[6] + (data[7] << 8)) / 8.0 - 256
+
+                print(f"Distance: {distance} cm | Strength: {strength} | Temp: {temperature:.1f}°C")
+            else:
+                print("Invalid data received")
+            
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        print("Stopped by user")
+
+if __name__ == "__main__":
+    read_distance()
