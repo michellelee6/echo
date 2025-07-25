@@ -1,4 +1,4 @@
-﻿
+keyboard﻿
 bicycle
 car
 motorcycle
@@ -64,7 +64,7 @@ TV
 laptop
 mouse
 remote
-keyboard
+
 cell phone
 microwave
 oven
