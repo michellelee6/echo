@@ -157,7 +157,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     while True:
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
-        print(outputs)
+        print("outputs: " + outputs)
         
         if outputs is None or len(outputs) != 4:
             continue
