@@ -141,7 +141,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
     model_path = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
     labels_path = "assets/coco_labels.txt"
-    threshold = 0.3
+    threshold = 0.5
 
     imx500 = IMX500(model_path)
     intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
@@ -170,10 +170,12 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
                 detected_labels = []
                 for box, score, cls in detections:
                     label = labels[cls] if cls < len(labels) else f"Class {cls}"
+                    print("raw label:" + label)
                     detected_labels.append(label)
 
                 # ✅ Deduplicate & sort for consistency
                 unique_sorted_labels = sorted(set(detected_labels))
+                print("unique sorted label:" + unique_sorted_labels)
                 current_label_str = ", ".join(unique_sorted_labels)
 
             # 🔁 Only update if different from last result
