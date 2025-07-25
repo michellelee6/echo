@@ -147,6 +147,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
     intrinsics.task = "object detection"
     labels = load_labels(labels_path)
+    print(f"loading labels {labels}")
 
     picam2 = Picamera2(imx500.camera_num)
     config = picam2.create_preview_configuration()
