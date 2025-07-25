@@ -141,7 +141,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
     model_path = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
     labels_path = "assets/coco_labels.txt"
-    threshold = 0.5
+    threshold = 0.3
 
     imx500 = IMX500(model_path)
     intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
