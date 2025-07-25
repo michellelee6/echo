@@ -164,6 +164,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
         try:
             detections = ssd_postprocess(outputs, threshold)
+            print(f"detections: {detections}")
 
             if len(detections) == 0:
                 current_label_str = "No objects detected"
