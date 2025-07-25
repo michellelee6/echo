@@ -1,13 +1,23 @@
 from picamera2 import Picamera2
-from picamera2.devices import IMX500
+from picamera2.previews.qt import QGlPicamera2
+from picamera2.outputs import FfmpegOutput
 from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput
+from picamera2.encoders import Quality
+from picamera2.devices.imx500 import IMX500
 import numpy as np
 import time
 
+# Initialize Picamera2 and IMX500
 picam2 = Picamera2()
-imx500 = IMX500(picam2)
+imx500 = IMX500()
+
+# Configure the camera for still capture with AI processing
+picam2.configure(picam2.create_still_configuration())
+
 picam2.start()
+time.sleep(2)
+
+threshold = 0.5  # confidence threshold
 
 while True:
     metadata = picam2.capture_metadata()
@@ -16,12 +26,12 @@ while True:
     if outputs is None or len(outputs) != 4:
         continue
 
-    boxes, class_scores, scores, num_detections = outputs
+    boxes, classes, scores, num_detections = outputs
 
-    print("Class scores shape:", np.array(class_scores).shape)
-    print("Class scores sample:", class_scores[0])
-    print("Boxes:", boxes[0])
-    print("Scores:", scores[0])
+    print("\n--- New Frame ---")
     print("Num detections:", num_detections)
+    print("Classes:", classes)
+    print("Scores:", scores)
+    print("Boxes:", boxes)
 
     time.sleep(1)
