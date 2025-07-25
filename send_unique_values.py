@@ -43,6 +43,7 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
         print("[GATT] Notifying stopped")
 
     def update_value(self, text):
+        print(f"[DEBUG] Updating BLE value to: {text}")
         encoded = text.encode('utf-8')
         self.value = dbus.Array([dbus.Byte(b) for b in encoded], signature='y')
         if self.notifying:
@@ -51,7 +52,6 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
     @dbus.service.signal("org.freedesktop.DBus.Properties", signature='sa{sv}as')
     def PropertiesChanged(self, interface, changed, invalidated):
         pass
-
 
 # GATT Service
 class ObjectDetectionService(dbus.service.Object):
@@ -135,7 +135,6 @@ def find_adapter():
             return path
     raise Exception("GATT Manager interface not found")
 
-# IMX500 detection + BLE sending
 def start_object_detection(char: ObjectDetectorCharacteristic):
     print("[INFO] Starting object detection using Picamera2 + IMX500")
 
@@ -147,54 +146,57 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
     intrinsics.task = "object detection"
     labels = load_labels(labels_path)
-    print(f"loading labels {labels}")
+    print(f"[DEBUG] Loaded labels: {labels}")
 
     picam2 = Picamera2(imx500.camera_num)
     config = picam2.create_preview_configuration()
     picam2.start(config)
 
-    last_label_str = None  # Store last unique label set
+    last_label_str = None
 
     while True:
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
-        print(f"outputs: {outputs}")
-        
+        print(f"[DEBUG] Raw outputs: {outputs}")
+
         if outputs is None or len(outputs) != 4:
+            print("[WARN] Invalid outputs from model")
             continue
 
         try:
             detections = ssd_postprocess(outputs, threshold)
-            print(f"detections: {detections}")
+            print(f"[DEBUG] Processed detections: {detections}")
 
-            if len(detections) == 0:
+            if not detections:
                 current_label_str = "No objects detected"
             else:
                 detected_labels = []
                 for box, score, cls in detections:
+                    print(f"[DEBUG] Class index: {cls}, score: {score}, box: {box}")
                     label = labels[cls] if cls < len(labels) else f"Class {cls}"
-                    print("raw label:" + label)
+                    print(f"[DEBUG] Detected label: {label}")
                     detected_labels.append(label)
 
-                # ✅ Deduplicate & sort for consistency
                 unique_sorted_labels = sorted(set(detected_labels))
-                print("unique sorted label: " + ", ".join(unique_sorted_labels))
                 current_label_str = ", ".join(unique_sorted_labels)
+                print(f"[DEBUG] Current unique label string: {current_label_str}")
 
-            # 🔁 Only update if different from last result
             if current_label_str != last_label_str:
-                print(f"[BLE] Sending: {current_label_str}")
+                print(f"[BLE] Sending update: {current_label_str}")
                 char.update_value(current_label_str)
                 last_label_str = current_label_str
 
         except Exception as e:
-            print(f"Detection error: {e}")
+            print(f"[ERROR] Detection error: {e}")
 
         time.sleep(1)
 
 def load_labels(path):
+    print(f"[INFO] Loading labels from: {path}")
     with open(path, "r") as f:
-        return [line.strip() for line in f.readlines()]
+        labels = [line.strip() for line in f.readlines()]
+    print(f"[INFO] Loaded {len(labels)} labels")
+    return labels
 
 def ssd_postprocess(outputs, threshold):
     boxes, classes, scores, num_detections = outputs
@@ -221,7 +223,6 @@ def main():
     MAIN_LOOP = GLib.MainLoop()
     GLib.timeout_add(100, lambda: True)
 
-    # Start object detection in separate thread
     threading.Thread(target=start_object_detection, args=(app.services[1],), daemon=True).start()
 
     MAIN_LOOP.run()
