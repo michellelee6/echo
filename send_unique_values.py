@@ -175,7 +175,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
                 # ✅ Deduplicate & sort for consistency
                 unique_sorted_labels = sorted(set(detected_labels))
-                print("unique sorted label:" + unique_sorted_labels)
+                print("unique sorted label: " + ", ".join(unique_sorted_labels))
                 current_label_str = ", ".join(unique_sorted_labels)
 
             # 🔁 Only update if different from last result
