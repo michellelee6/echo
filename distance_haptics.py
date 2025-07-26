@@ -1,4 +1,4 @@
-mport smbus2
+import smbus2
 import time
 import RPi.GPIO as GPIO
 
