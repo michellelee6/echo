@@ -22,26 +22,28 @@ def read_distance(address):
         print(f"Error reading from 0x{address:02X}: {e}")
         return None
 
-obstacle_detected = False
-
-
 while True:
+    obstacle_detected = False
+    min_dist = None
+
     for i, addr in enumerate(SENSOR_ADDRESSES):
         dist = read_distance(addr)
         if dist is not None:
             if dist < 100:
                 print(f"Obstacle detected at sensor 0x{addr:02X}: {dist} cm away")
                 obstacle_detected = True
+                if min_dist is None or dist < min_dist:
+                    min_dist = dist
             else:
                 print(f"Sensor {i+1} (0x{addr:02X}): {dist} cm")
-                obstacle_detected = False
         else:
             print(f"Sensor {i+1} (0x{addr:02X}): Read error")
-            obstacle_detected = False
 
-    if obstacle_detected == True:
-        blink_delay = ((dist ** 2) * 0.1) + 0.05  # convert to seconds
+    if obstacle_detected and min_dist is not None:
+        blink_delay = ((min_dist ** 2) * 0.1) + 0.05
         GPIO.output(PIN, GPIO.HIGH)
         time.sleep(0.1)
         GPIO.output(PIN, GPIO.LOW)
         time.sleep(blink_delay)
+    else:
+        time.sleep(0.1)  # short idle pause to avoid maxing CPU
