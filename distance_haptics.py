@@ -33,7 +33,7 @@ while True:
         if dist is not None:
             if dist < 100:
                 print(f"Obstacle detected at sensor 0x{addr:02X}: {dist} cm")
-                blink_delay = ((dist ** 2) * 0.1) + 0.05
+                blink_delay = (dist * 0.1) + 0.05
                 GPIO.output(pin, GPIO.HIGH)
                 time.sleep(0.1)
                 GPIO.output(pin, GPIO.LOW)
