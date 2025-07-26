@@ -1,4 +1,4 @@
-import smbus2
+mport smbus2
 import time
 import RPi.GPIO as GPIO
 
@@ -38,10 +38,10 @@ while True:
         else:
             print(f"Sensor {i+1} (0x{addr:02X}): Read error")
             obstacle_detected = False
-    
+
     if obstacle_detected == True:
-        blink_delay = (dist * 0.01) + 0.05  # convert to seconds
+        blink_delay = ((dist ** 2) * 0.1) + 0.05  # convert to seconds
         GPIO.output(PIN, GPIO.HIGH)
-        time.sleep(blink_delay)
+        time.sleep(0.1)
         GPIO.output(PIN, GPIO.LOW)
         time.sleep(blink_delay)
