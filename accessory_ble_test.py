@@ -2,25 +2,25 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 from gi.repository import GLib
+import time
 
 BLUEZ_SERVICE_NAME = 'org.bluez'
-ADAPTER_IFACE = 'org.bluez.Adapter1'
-LE_ADVERTISING_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
-ADVERTisement_IFACE = 'org.bluez.LEAdvertisement1'
+ADVERT_IFACE = 'org.bluez.LEAdvertisement1'
+ADAPTER_PATH = '/org/bluez/hci0'
+AD_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
 
 UUID = '12345678-1234-5678-1234-56789ABCDEF0'
 
 class Advertisement(dbus.service.Object):
-    PATH_BASE = '/org/bluez/example/advertisement'
+    PATH = '/org/bluez/example/advertisement0'
 
-    def __init__(self, bus, index):
-        self.path = self.PATH_BASE + str(index)
+    def __init__(self, bus):
         self.bus = bus
-        dbus.service.Object.__init__(self, bus, self.path)
+        dbus.service.Object.__init__(self, bus, self.PATH)
 
     def get_properties(self):
         return {
-            ADVERTisement_IFACE: {
+            ADVERT_IFACE: {
                 'Type': 'peripheral',
                 'ServiceUUIDs': [UUID],
                 'LocalName': 'TestBLEDevice',
@@ -29,45 +29,66 @@ class Advertisement(dbus.service.Object):
         }
 
     def get_path(self):
-        return dbus.ObjectPath(self.path)
+        return dbus.ObjectPath(self.PATH)
 
     @dbus.service.method(dbus_interface='org.freedesktop.DBus.Properties',
                          in_signature='s', out_signature='a{sv}')
     def GetAll(self, interface):
         return self.get_properties()[interface]
 
-    @dbus.service.method(ADVERTisement_IFACE, in_signature='', out_signature='')
+    @dbus.service.method(ADVERT_IFACE, in_signature='', out_signature='')
     def Release(self):
         print("Advertisement released")
 
 
-def find_adapter(bus):
-    obj = bus.get_object(BLUEZ_SERVICE_NAME, '/org/bluez/hci0')
-    adapter_props = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
-    return obj, adapter_props
+def restart_adapter():
+    import subprocess
+    subprocess.run(["sudo", "hciconfig", "hci0", "down"])
+    time.sleep(1)
+    subprocess.run(["sudo", "hciconfig", "hci0", "up"])
+    print("Adapter reset")
 
+def register_advertisement(bus, ad_manager, advert):
+    try:
+        ad_manager.RegisterAdvertisement(advert.get_path(), {},
+                                         reply_handler=lambda: print("✅ Advertisement registered"),
+                                         error_handler=lambda e: print(f"❌ Failed to register: {e}"))
+    except Exception as e:
+        print(f"Exception while registering: {e}")
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
 
-    adapter_obj, adapter_props = find_adapter(bus)
+    adapter_obj = bus.get_object(BLUEZ_SERVICE_NAME, ADAPTER_PATH)
+    ad_manager = dbus.Interface(adapter_obj, AD_MANAGER_IFACE)
 
-    ad_manager = dbus.Interface(adapter_obj, LE_ADVERTISING_MANAGER_IFACE)
+    advert = Advertisement(bus)
 
-    advert = Advertisement(bus, 0)
-    ad_manager.RegisterAdvertisement(advert.get_path(), {},
-                                     reply_handler=lambda: print("Advertisement registered"),
-                                     error_handler=lambda e: print(f"Failed to register: {e}"))
+    restart_adapter()
 
-    mainloop = GLib.MainLoop()
+    # Attempt to register advertisement, retry every 10 seconds if failed
+    def advertise_loop():
+        try:
+            ad_manager.UnregisterAdvertisement(advert.get_path())
+            print("🔄 Unregistered old advertisement")
+        except:
+            pass  # In case not already registered
+
+        register_advertisement(bus, ad_manager, advert)
+        return True  # Repeat timer
+
+    GLib.timeout_add_seconds(15, advertise_loop)
+    advertise_loop()
+
     try:
-        mainloop.run()
+        GLib.MainLoop().run()
     except KeyboardInterrupt:
-        print("Stopping advertisement...")
-        ad_manager.UnregisterAdvertisement(advert)
-        advert.remove_from_connection()
-
+        print("Interrupted by user")
+        try:
+            ad_manager.UnregisterAdvertisement(advert)
+        except:
+            pass
 
 if __name__ == '__main__':
     main()
