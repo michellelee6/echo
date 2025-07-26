@@ -18,7 +18,7 @@ SERVICE_UUID = '12345678-1234-5678-1234-56789ABCDEF0'  # service
 CHAR_UUID = '12345678-1234-5678-1234-56789ABCDEF1'     # characteristic
 
 # Sensor I2C setup
-SENSOR_ADDRESSES = [0x11, 0x12, 0x13]
+SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
 bus = smbus2.SMBus(1)
 
 # --------- Advertisement ---------
