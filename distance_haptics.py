@@ -38,7 +38,6 @@ while True:
         else:
             print(f"Sensor {i+1} (0x{addr:02X}): Read error")
             obstacle_detected = False
-    time.sleep(0.1)
     
     if obstacle_detected == True:
         blink_delay = (dist * 0.01) + 0.05  # convert to seconds
