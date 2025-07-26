@@ -27,6 +27,6 @@ while True:
         dist = read_distance(SENSOR_ADDRESSES[i])
         if dist is not None and dist < 100:
             print(f"Obstacle detected {dist} cm away")
-            GPIO.output(GPIO_PINS[i], GPIO.HIGH)
+            # GPIO.output(GPIO_PINS[i], GPIO.HIGH)
         else:
             GPIO.output(GPIO_PINS[i], GPIO.LOW)
