@@ -64,11 +64,7 @@ def classify(S1, S2, S3, S1_0, S2_0, H):
     y1 = H - S1 * sin1
     y2 = H - S2 * sin2
     y3 = H + S3 * sin3
-
-    # Ensure S1/S2 see same object
-    if abs(r1 - r2) > SAME_OBJ_THRESH:
-        return "Obstacle detected"
-
+    
     delta_y = (y1 + y2) / 2
 
     # 1. Drop
