@@ -78,18 +78,21 @@ class DistanceCharacteristic(dbus.service.Object):
         return self.value
 
     def update_sensor_value(self):
-        readings = []
-        for addr in SENSOR_ADDRESSES:
-            try:
-                data = bus.read_i2c_block_data(addr, 0, 2)
-                dist = data[0] + (data[1] << 8)
-                readings.append(str(dist))
-            except Exception as e:
-                print(f"Error reading from 0x{addr:02X}: {e}")
-                readings.append("ERR")
-        distance_string = ",".join(readings)
-        print("Updated BLE characteristic with:", distance_string)
-        self.value = [dbus.Byte(c.encode()) for c in distance_string]
+    readings = []
+    for addr in SENSOR_ADDRESSES:
+        try:
+            data = bus.read_i2c_block_data(addr, 0, 2)
+            dist = data[0] + (data[1] << 8)
+            readings.append(str(dist))
+        except Exception as e:
+            print(f"Error reading from 0x{addr:02X}: {e}")
+            readings.append("ERR")
+    
+    distance_string = ",".join(readings)
+    print("Updated BLE characteristic with:", distance_string)
+    
+    # Correct UTF-8 byte array encoding
+    self.value = dbus.Array([dbus.Byte(b) for b in distance_string.encode('utf-8')], signature=dbus.Signature('y'))
 
 # --------- GATT Service ---------
 class DistanceService(dbus.service.Object):
