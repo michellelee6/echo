@@ -3,7 +3,7 @@ import time
 import RPi.GPIO as GPIO
 
 # TF-Luna I2C addresses
-SENSOR_ADDRESSES = [0x11, 0x12, 0x13]
+SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
 
 # Set up I2C
 bus = smbus2.SMBus(1)
