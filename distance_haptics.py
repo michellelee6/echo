@@ -22,23 +22,27 @@ def read_distance(address):
         print(f"Error reading from 0x{address:02X}: {e}")
         return None
 
-try:
-    while True:
-        for i, addr in enumerate(SENSOR_ADDRESSES):
-            dist = read_distance(addr)
-            if dist is not None:
-                if dist < 100:
-                    print(f"Obstacle detected at sensor 0x{addr:02X}: {dist} cm away")
-                    blink_delay = dist * 0.01  # convert to seconds
-                    GPIO.output(PIN, GPIO.HIGH)
-                    time.sleep(blink_delay)
-                    GPIO.output(PIN, GPIO.LOW)
-                    time.sleep(blink_delay)
-                else:
-                    print(f"Sensor {i+1} (0x{addr:02X}): {dist} cm")
-            else:
-                print(f"Sensor {i+1} (0x{addr:02X}): Read error")
-        time.sleep(0.1)
+obstacle_detected = False
 
-except KeyboardInterrupt:
-    GPIO.cleanup()
+
+while True:
+    for i, addr in enumerate(SENSOR_ADDRESSES):
+        dist = read_distance(addr)
+        if dist is not None:
+            if dist < 100:
+                print(f"Obstacle detected at sensor 0x{addr:02X}: {dist} cm away")
+                obstacle_detected = True
+            else:
+                print(f"Sensor {i+1} (0x{addr:02X}): {dist} cm")
+                obstacle_detected = False
+        else:
+            print(f"Sensor {i+1} (0x{addr:02X}): Read error")
+            obstacle_detected = False
+    time.sleep(0.1)
+    
+    while obstacle_detected == True:
+        blink_delay = dist * 0.01  # convert to seconds
+        GPIO.output(PIN, GPIO.HIGH)
+        time.sleep(blink_delay)
+        GPIO.output(PIN, GPIO.LOW)
+        time.sleep(blink_delay)
