@@ -17,11 +17,11 @@ PERSON_MIN  = 150
 PERSON_MAX  = 180
 
 # --- Tunable thresholds (cm) ---
-WALK_THRESH      =  8   # noise band
-SAME_OBJ_THRESH  = 10   # horizontal grouping
-DROP_THRESH     = -10   # cm avg below floor → drop
-CURB_MIN, CURB_MAX = 10, 30
-BOX_THRESH       = 30
+WALK_THRESH      =  100   # noise band
+SAME_OBJ_THRESH  = 100   # horizontal grouping
+DROP_THRESH     = -100   # cm avg below floor → drop
+CURB_MIN, CURB_MAX = 100, 300
+BOX_THRESH       = 300
 
 # --- I2C setup ---
 bus = smbus2.SMBus(1)
