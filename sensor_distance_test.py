@@ -89,11 +89,6 @@ def classify(S1, S2, S3, S1_0, S2_0, H):
     # 6. Person
     if abs(y1) <= WALK_THRESH and abs(y2) <= WALK_THRESH and PERSON_MIN <= y3 <= PERSON_MAX:
         return "Person"
-    # 7. Nothing
-    if abs(delta_y) <= WALK_THRESH and r3 > max(r1, r2) + 20:
-        return "Nothing"
-    # 8. Fallback
-    return "Obstacle detected"
 
 # --- Main loop ---
 S1_0, S2_0, H = calibrate()
