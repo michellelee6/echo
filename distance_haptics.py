@@ -40,7 +40,7 @@ while True:
             obstacle_detected = False
     time.sleep(0.1)
     
-    while obstacle_detected == True:
+    if obstacle_detected == True:
         blink_delay = dist * 0.01  # convert to seconds
         GPIO.output(PIN, GPIO.HIGH)
         time.sleep(blink_delay)
