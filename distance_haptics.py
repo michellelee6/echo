@@ -2,40 +2,37 @@ import smbus2
 import time
 import RPi.GPIO as GPIO
 
-# TF-Luna I2C addresses and corresponding GPIO pins
-SENSORS = {
-    0x11: 17,  # GPIO17 for sensor at 0x11
-    0x12: 27,  # GPIO27 for sensor at 0x12
-    0x13: 4   # GPIO22 for sensor at 0x13
-}
+# I2C addresses for the TF-Luna sensors
+SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
+GPIO_PINS = [4, 14, 15]
 
-# Set up I2C
-bus = smbus2.SMBus(1)
-
-# Set up GPIO
+# Setup GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-for pin in SENSORS.values():
+for pin in GPIO_PINS:
     GPIO.setup(pin, GPIO.OUT)
     GPIO.output(pin, GPIO.LOW)
 
+# Initialize I2C
+bus = smbus2.SMBus(1)
+
 def read_distance(address):
     try:
-        data = bus.read_i2c_block_data(address, 0, 2)
-        return data[0] + (data[1] << 8)
+        # TF-Luna sends 6 bytes, distance is bytes 3 and 2 (LSB first)
+        data = bus.read_i2c_block_data(address, 0, 6)
+        distance = data[2] + (data[3] << 8)
+        return distance
     except Exception as e:
         print(f"Error reading from 0x{address:02X}: {e}")
         return None
 
 while True:
-    for addr, pin in SENSORS.items():
-        dist = read_distance(addr)
-        if dist is not None:
-            if dist < 100:
-                print(f"Obstacle detected at sensor 0x{addr:02X}: {dist} cm")
-                GPIO.output(pin, GPIO.HIGH)
+    for i, address in enumerate(SENSOR_ADDRESSES):
+        distance = read_distance(address)
+        if distance is not None:
+            if distance < 100:
+                print(f"Obstacle detected {distance} cm away at sensor 0x{address:02X}")
+                GPIO.output(GPIO_PINS[i], GPIO.HIGH)
             else:
-                print(f"Sensor 0x{addr:02X}: {dist} cm - No obstacle")
-                GPIO.output(pin, GPIO.LOW)
-        else:
-            print(f"Sensor 0x{addr:02X}: Read error")
+                GPIO.output(GPIO_PINS[i], GPIO.LOW)
+    time.sleep(0.1)
