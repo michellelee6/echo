@@ -1,26 +1,31 @@
 from smbus2 import SMBus
 import time
 
-OLD_ADDR = 0x10  # current address
-NEW_ADDR = 0x11  # new address
+OLD_ADDR = 0x10
+NEW_ADDR = 0x11
 
-# TF-Luna I2C register addresses
-I2C_ADDR_REG = 0x11  # EEPROM address register
-SAVE_REG = 0x20      # Save settings command register
+def calculate_checksum(data):
+    return sum(data) & 0xFF
 
-def change_tfluna_address(old_addr, new_addr):
+def set_tfluna_i2c_address(old_addr, new_addr):
     with SMBus(1) as bus:
+        # Build command frame
+        payload = [
+            0x5A,       # Header
+            0x05,       # Function: write
+            0x03,       # Data length
+            0x11,       # Register: I2C address register
+            new_addr,   # New I2C address
+            0x01        # Save command
+        ]
+        checksum = calculate_checksum(payload)
+        payload.append(checksum)
+
+        # Send command
         try:
-            # Write new I2C address to EEPROM address register
-            bus.write_byte_data(old_addr, I2C_ADDR_REG, new_addr)
-            time.sleep(0.1)
-
-            # Save to EEPROM so it persists after reboot
-            bus.write_byte_data(old_addr, SAVE_REG, 0x01)
-            time.sleep(0.1)
-
-            print(f"Address changed from 0x{old_addr:02X} to 0x{new_addr:02X}")
+            write = bus.write_i2c_block_data(old_addr, payload[0], payload[1:])
+            print(f"Sent address change to 0x{new_addr:02X}, now power cycle the sensor.")
         except Exception as e:
-            print("Failed to change address:", e)
+            print("I2C command failed:", e)
 
-change_tfluna_address(OLD_ADDR, NEW_ADDR)
+set_tfluna_i2c_address(OLD_ADDR, NEW_ADDR)
