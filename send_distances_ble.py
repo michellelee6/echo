@@ -14,8 +14,8 @@ AD_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
 ADAPTER_PATH = '/org/bluez/hci0'
 
 # UUIDs (MUST match iOS)
-SERVICE_UUID = '12345678-1234-5678-1234-56789ABCDEF0'  # service
-CHAR_UUID = '12345678-1234-5678-1234-56789ABCDEF1'     # characteristic
+SERVICE_UUID = '12345678-1234-5678-1234-56789ABCDEF0'
+CHAR_UUID = '12345678-1234-5678-1234-56789ABCDEF1'
 
 # Sensor I2C setup
 SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
@@ -60,6 +60,9 @@ class DistanceCharacteristic(dbus.service.Object):
         self.service = service
         dbus.service.Object.__init__(self, bus, self.path)
 
+    def get_path(self):
+        return dbus.ObjectPath(self.path)
+
     @dbus.service.method('org.freedesktop.DBus.Properties', in_signature='s', out_signature='a{sv}')
     def GetAll(self, interface):
         if interface != 'org.bluez.GattCharacteristic1':
@@ -79,20 +82,20 @@ class DistanceCharacteristic(dbus.service.Object):
 
     def update_sensor_value(self):
         readings = []
-    for addr in SENSOR_ADDRESSES:
-        try:
-            data = bus.read_i2c_block_data(addr, 0, 2)
-            dist = data[0] + (data[1] << 8)
-            readings.append(str(dist))
-        except Exception as e:
-            print(f"Error reading from 0x{addr:02X}: {e}")
-            readings.append("ERR")
-    
-    distance_string = ",".join(readings)
-    print("Updated BLE characteristic with:", distance_string)
-    
-    # Correct UTF-8 byte array encoding
-    self.value = dbus.Array([dbus.Byte(b) for b in distance_string.encode('utf-8')], signature=dbus.Signature('y'))
+        for addr in SENSOR_ADDRESSES:
+            try:
+                data = bus.read_i2c_block_data(addr, 0, 2)
+                dist = data[0] + (data[1] << 8)
+                readings.append(str(dist))
+            except Exception as e:
+                print(f"Error reading from 0x{addr:02X}: {e}")
+                readings.append("ERR")
+
+        distance_string = ",".join(readings)
+        print("Updated BLE characteristic with:", distance_string)
+
+        # Convert string to DBus byte array
+        self.value = dbus.Array([dbus.Byte(b) for b in distance_string.encode('utf-8')], signature=dbus.Signature('y'))
 
 # --------- GATT Service ---------
 class DistanceService(dbus.service.Object):
@@ -117,7 +120,7 @@ class DistanceService(dbus.service.Object):
             'Primary': True
         }
 
-# --------- Application ---------
+# --------- GATT Application ---------
 class Application(dbus.service.Object):
     def __init__(self, bus):
         self.path = '/org/bluez/example/app'
@@ -133,7 +136,7 @@ class Application(dbus.service.Object):
                 'org.bluez.GattService1': service.GetAll('org.bluez.GattService1')
             }
             for char in service.characteristics:
-                managed_objects[char.path] = {
+                managed_objects[char.get_path()] = {
                     'org.bluez.GattCharacteristic1': char.GetAll('org.bluez.GattCharacteristic1')
                 }
         return managed_objects
@@ -152,25 +155,25 @@ def main():
 
     mainloop = GLib.MainLoop()
 
-    def cleanup():
+    def cleanup(*_):
         print("Cleaning up...")
         try:
             ad_manager.UnregisterAdvertisement(advert.get_path())
-        except:
-            pass
+        except Exception as e:
+            print("Failed to unregister advertisement:", e)
         mainloop.quit()
 
-    signal.signal(signal.SIGINT, lambda sig, frame: cleanup())
-    signal.signal(signal.SIGTERM, lambda sig, frame: cleanup())
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
 
     print("Registering GATT app and advertisement...")
     gatt_manager.RegisterApplication(app.path, {},
-                                     reply_handler=lambda: print("✅ GATT app registered"),
-                                     error_handler=lambda e: print(f"❌ Failed to register app: {e}"))
+        reply_handler=lambda: print("✅ GATT app registered"),
+        error_handler=lambda e: print(f"❌ Failed to register app: {e}"))
 
     ad_manager.RegisterAdvertisement(advert.get_path(), {},
-                                     reply_handler=lambda: print("✅ Advertisement registered"),
-                                     error_handler=lambda e: print(f"❌ Failed to register advert: {e}"))
+        reply_handler=lambda: print("✅ Advertisement registered"),
+        error_handler=lambda e: print(f"❌ Failed to register advert: {e}"))
 
     mainloop.run()
 
