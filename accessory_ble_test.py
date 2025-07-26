@@ -3,6 +3,8 @@ import dbus.mainloop.glib
 import dbus.service
 from gi.repository import GLib
 import time
+import signal
+import sys
 
 BLUEZ_SERVICE_NAME = 'org.bluez'
 ADVERT_IFACE = 'org.bluez.LEAdvertisement1'
@@ -34,19 +36,20 @@ class Advertisement(dbus.service.Object):
     @dbus.service.method(dbus_interface='org.freedesktop.DBus.Properties',
                          in_signature='s', out_signature='a{sv}')
     def GetAll(self, interface):
+        print(f"GetAll called for interface: {interface}")
         return self.get_properties()[interface]
 
     @dbus.service.method(ADVERT_IFACE, in_signature='', out_signature='')
     def Release(self):
         print("Advertisement released")
 
-
 def restart_adapter():
     import subprocess
+    print("Restarting bluetooth adapter hci0")
     subprocess.run(["sudo", "hciconfig", "hci0", "down"])
     time.sleep(1)
     subprocess.run(["sudo", "hciconfig", "hci0", "up"])
-    print("Adapter reset")
+    print("Adapter reset complete")
 
 def register_advertisement(bus, ad_manager, advert):
     try:
@@ -54,7 +57,15 @@ def register_advertisement(bus, ad_manager, advert):
                                          reply_handler=lambda: print("✅ Advertisement registered"),
                                          error_handler=lambda e: print(f"❌ Failed to register: {e}"))
     except Exception as e:
-        print(f"Exception while registering: {e}")
+        print(f"Exception while registering advertisement: {e}")
+
+def unregister_advertisement(ad_manager, advert):
+    try:
+        print("Attempting to unregister advertisement...")
+        ad_manager.UnregisterAdvertisement(advert.get_path())
+        print("Advertisement unregistered successfully")
+    except Exception as e:
+        print(f"Failed to unregister advertisement: {e}")
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -67,28 +78,27 @@ def main():
 
     restart_adapter()
 
-    # Attempt to register advertisement, retry every 10 seconds if failed
     def advertise_loop():
-        try:
-            ad_manager.UnregisterAdvertisement(advert.get_path())
-            print("🔄 Unregistered old advertisement")
-        except:
-            pass  # In case not already registered
-
+        unregister_advertisement(ad_manager, advert)
         register_advertisement(bus, ad_manager, advert)
-        return True  # Repeat timer
+        return True  # repeat every 15 seconds
 
     GLib.timeout_add_seconds(15, advertise_loop)
     advertise_loop()
 
+    def exit_gracefully(signum, frame):
+        print("\nSignal received, cleaning up...")
+        unregister_advertisement(ad_manager, advert)
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, exit_gracefully)
+    signal.signal(signal.SIGTERM, exit_gracefully)
+
+    print("Starting main loop for BLE advertising...")
     try:
         GLib.MainLoop().run()
-    except KeyboardInterrupt:
-        print("Interrupted by user")
-        try:
-            ad_manager.UnregisterAdvertisement(advert)
-        except:
-            pass
+    except Exception as e:
+        print(f"Exception in main loop: {e}")
 
 if __name__ == '__main__':
     main()
