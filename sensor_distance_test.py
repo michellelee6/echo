@@ -4,9 +4,9 @@ import time
 bus = smbus2.SMBus(1)
 
 SENSORS = {
-    'left': 0x11,    # pointing up
+    'left': 0x13,    # pointing up
     'middle': 0x12,  # pointing down
-    'right': 0x13    # angled down
+    'right': 0x11    # angled down
 }
 
 CALIBRATION_SAMPLES = 20
