@@ -78,7 +78,7 @@ class DistanceCharacteristic(dbus.service.Object):
         return self.value
 
     def update_sensor_value(self):
-    readings = []
+        readings = []
     for addr in SENSOR_ADDRESSES:
         try:
             data = bus.read_i2c_block_data(addr, 0, 2)
