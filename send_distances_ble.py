@@ -100,6 +100,8 @@ class DistanceCharacteristic(dbus.service.Object):
             {'Value': self.value},
             []
         )
+        print("🔔 Notifying with value:", self.value)
+        self.PropertiesChanged(...)
 
     def update_sensor_value(self):
         readings = []
