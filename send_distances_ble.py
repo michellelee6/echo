@@ -94,12 +94,12 @@ class DistanceCharacteristic(dbus.service.Object):
         GLib.timeout_add_seconds(1, notify_cb)
 
     def notify(self):
-    self.update_sensor_value()
-    self.PropertiesChanged(
-        'org.bluez.GattCharacteristic1',
-        {'Value': self.value},
-        []
-    )
+        self.update_sensor_value()
+        self.PropertiesChanged(
+            'org.bluez.GattCharacteristic1',
+            {'Value': self.value},
+            []
+        )
     print("🔔 Notifying with value:", self.value)
 
     def update_sensor_value(self):
