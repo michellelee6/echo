@@ -151,6 +151,7 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     picam2 = Picamera2(imx500.camera_num)
     config = picam2.create_preview_configuration()
     picam2.start(config)
+    picam2.start_preview()
 
     last_label_str = None
 
