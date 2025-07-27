@@ -120,6 +120,16 @@ class DistanceCharacteristic(dbus.service.Object):
             signature=dbus.Signature('y')
         )
 
+    @dbus.service.method('org.bluez.GattCharacteristic1')
+    def StartNotify(self):
+        print("StartNotify called")
+        self.notifying = True
+
+    @dbus.service.method('org.bluez.GattCharacteristic1')
+    def StopNotify(self):
+        print("StopNotify called")
+        self.notifying = False
+
 # --------- GATT Service ---------
 class DistanceService(dbus.service.Object):
     PATH_BASE = '/org/bluez/example/service'
