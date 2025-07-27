@@ -1,31 +1,26 @@
 from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput
 import time
 
-# Initialize the camera
+# Initialize camera with IMX500 sensor (automatically uses imx500_mobilenet_ssd.json)
 picam2 = Picamera2()
 
-# Set up the configuration with post-processing (object detection)
+# Use full resolution preview configuration (adjust if needed)
 config = picam2.create_preview_configuration(
     main={"size": (1920, 1080)},
-    queue=True,
-    transform=0,
-    post_process="imx500_mobilenet_ssd"
+    queue=True
 )
 
 picam2.configure(config)
 picam2.start_preview()
 picam2.start()
 
-print("Camera started. Detecting objects...\n")
+print("Camera started. Detecting objects...")
 
 try:
     while True:
-        # Grab AI metadata
         metadata = picam2.capture_metadata()
-        if "objects" in metadata:
-            for obj in metadata["objects"]:
+        if "Objects" in metadata:
+            for obj in metadata["Objects"]:
                 label = obj.get("label", "Unknown")
                 confidence = obj.get("confidence", 0)
                 box = obj.get("box", [])
