@@ -207,7 +207,7 @@ def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
         # print(f"[DEBUG] parse_detections Last Label: {last_label}")
 
         # Pass label to Bluetooth service
-        char.update_value(label)
+        #char.update_value(label)
 
 @lru_cache
 def get_labels():
