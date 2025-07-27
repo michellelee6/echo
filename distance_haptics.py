@@ -3,7 +3,7 @@ import time
 import RPi.GPIO as GPIO
 
 # TF-Luna I2C addresses
-SENSOR_ADDRESSES = [0x11, 0x12, 0x13]
+SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
 
 # Corresponding GPIO pins for haptic motors
 MOTOR_PINS = [4, 14, 15]
