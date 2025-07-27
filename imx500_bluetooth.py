@@ -282,7 +282,7 @@ def get_args():
                         help="Print JSON network_intrinsics then exit")
     return parser.parse_args()
 
-def main():
+if __name__ == "__main__":
 
     # Initialize IMX500 camera
     args = get_args()
@@ -328,7 +328,7 @@ def main():
     picam2.pre_callback = draw_detections
 
     # Initialize Bluetooth pairing
-    global MAIN_LOOP
+    #global MAIN_LOOP
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
     app = Application(bus)
@@ -343,6 +343,4 @@ def main():
     threading.Thread(target=parse_detections, args=(picam2.capture_metadata(), app.services[1]), daemon=True).start()
 
     MAIN_LOOP.run()
-
-if __name__ == "__main__":
-    main()
+    
