@@ -149,9 +149,9 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
     print(f"[DEBUG] Loaded labels: {labels}")
 
     picam2 = Picamera2(imx500.camera_num)
+    picam2.start_preview()
     config = picam2.create_preview_configuration()
     picam2.start(config)
-    picam2.start_preview()
 
     last_label_str = None
 
