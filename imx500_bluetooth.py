@@ -324,7 +324,7 @@ if __name__ == "__main__":
 
     imx500.show_network_fw_progress_bar()
     # Disable cam preview
-    picam2.start(config, show_preview=False)
+    picam2.start(config, show_preview=True)
 
     if intrinsics.preserve_aspect_ratio:
         imx500.set_auto_aspect_ratio()
