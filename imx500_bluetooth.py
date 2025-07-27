@@ -200,13 +200,14 @@ def parse_detections(picam2, char: ObjectDetectorCharacteristic):
         ]
 
         labels = get_labels()
-        #for detection in last_detections:
         if len(last_detections) > 0:
             label = f"{labels[int(last_detections[0].category)]}"
             print(f"[DEBUG] parse_detections Label: {label}")
 
             # Pass label to Bluetooth service
             char.update_value(label)
+        
+        time.sleep(1)
 
 @lru_cache
 def get_labels():
