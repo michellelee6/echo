@@ -162,6 +162,7 @@ class Detection:
 
 
 def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
+    print("[DEBUG] Calling parse_detections()")
     while True:
         """Parse the output tensor into a number of detected objects, scaled to the ISP output."""
         global last_detections
@@ -218,6 +219,7 @@ def get_labels():
 
 
 def draw_detections(request, stream="main"):
+    print(f"[DEBUG] Calling draw_detections()")
     """Draw the detections for this request onto the ISP output."""
     detections = last_results
     if detections is None:
