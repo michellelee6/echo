@@ -199,7 +199,7 @@ def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
         ]
 
         labels = get_labels()
-        label = f"{labels[int(last_detections.category)]}"
+        label = f"{labels[int(last_detections[0].category)]}"
         print(f"[DEBUG] parse_detections Label: {label}")
 
         # Pass label to Bluetooth service
