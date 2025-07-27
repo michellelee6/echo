@@ -4,7 +4,6 @@ import dbus.service
 from gi.repository import GLib
 import time
 import signal
-import sys
 import smbus2
 
 # Bluetooth + DBus constants
@@ -13,7 +12,7 @@ GATT_MANAGER_IFACE = 'org.bluez.GattManager1'
 AD_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
 ADAPTER_PATH = '/org/bluez/hci0'
 
-# UUIDs (MUST match iOS)
+# UUIDs (must match iOS)
 SERVICE_UUID = '12345678-1234-5678-1234-56789ABCDEF0'
 CHAR_UUID = '12345678-1234-5678-1234-56789ABCDEF1'
 
@@ -56,9 +55,11 @@ class DistanceCharacteristic(dbus.service.Object):
         self.path = service.path + f'/char{index}'
         self.bus = bus
         self.value = [dbus.Byte(0)]
-        self.notifying = False
+        self.notifying = True
         self.service = service
         dbus.service.Object.__init__(self, bus, self.path)
+
+        self.start_notify_loop()
 
     def get_path(self):
         return dbus.ObjectPath(self.path)
@@ -80,6 +81,26 @@ class DistanceCharacteristic(dbus.service.Object):
         self.update_sensor_value()
         return self.value
 
+    # D-Bus signal to notify clients
+    @dbus.service.signal('org.freedesktop.DBus.Properties', signature='sa{sv}as')
+    def PropertiesChanged(self, interface, changed, invalidated):
+        pass
+
+    def start_notify_loop(self):
+        def notify_cb():
+            if self.notifying:
+                self.notify()
+            return True  # continue calling
+        GLib.timeout_add_seconds(1, notify_cb)
+
+    def notify(self):
+        self.update_sensor_value()
+        self.PropertiesChanged(
+            'org.bluez.GattCharacteristic1',
+            {'Value': self.value},
+            []
+        )
+
     def update_sensor_value(self):
         readings = []
         for addr in SENSOR_ADDRESSES:
@@ -94,8 +115,10 @@ class DistanceCharacteristic(dbus.service.Object):
         distance_string = ",".join(readings)
         print("Updated BLE characteristic with:", distance_string)
 
-        # Convert string to DBus byte array
-        self.value = dbus.Array([dbus.Byte(b) for b in distance_string.encode('utf-8')], signature=dbus.Signature('y'))
+        self.value = dbus.Array(
+            [dbus.Byte(b) for b in distance_string.encode('utf-8')],
+            signature=dbus.Signature('y')
+        )
 
 # --------- GATT Service ---------
 class DistanceService(dbus.service.Object):
