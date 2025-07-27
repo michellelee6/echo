@@ -162,7 +162,6 @@ class Detection:
 
 
 def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
-
     while True:
         """Parse the output tensor into a number of detected objects, scaled to the ISP output."""
         global last_detections
@@ -199,9 +198,9 @@ def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
         ]
 
         labels = get_labels()
-        for detection in last_detections:
-            label = f"{labels[int(detection.category)]}"
-            print(f"[DEBUG] parse_detections Label: {label}")
+        #for detection in last_detections:
+        #    label = f"{labels[int(detection.category)]}"
+        #    print(f"[DEBUG] parse_detections Label: {label}")
 
         # last_label = f"{labels[int(last_detections[-1].category)]}"
         # print(f"[DEBUG] parse_detections Last Label: {last_label}")
