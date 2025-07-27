@@ -344,8 +344,7 @@ if __name__ == "__main__":
     MAIN_LOOP = GLib.MainLoop()
     GLib.timeout_add(100, lambda: True)
 
-    parse_detections(picam2.capture_metadata(), app.services[1])
- #   threading.Thread(target=parse_detections, args=(picam2.capture_metadata(), app.services[1]), daemon=True).start()
+    threading.Thread(target=parse_detections, args=(picam2.capture_metadata(), app.services[1]), daemon=True).start()
 
     MAIN_LOOP.run()
     
