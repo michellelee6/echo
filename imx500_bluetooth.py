@@ -217,7 +217,7 @@ def get_labels():
     return labels
 
 
-def draw_detections(request, char: ObjectDetectorCharacteristic, stream="main"):
+def draw_detections(request, stream="main"):
     """Draw the detections for this request onto the ISP output."""
     detections = last_results
     if detections is None:
@@ -229,7 +229,8 @@ def draw_detections(request, char: ObjectDetectorCharacteristic, stream="main"):
             label = f"{labels[int(detection.category)]} ({detection.conf:.2f})"
 
             # Pass label to Bluetooth service
-            char.update_value(label)
+
+            #char.update_value(label)
 
             # Calculate text size and position
             (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
