@@ -156,9 +156,9 @@ def start_object_detection(char: ObjectDetectorCharacteristic):
 
     while True:
         request = picam2.capture_request()
-        metadata = request.capture_metadata()
-        request.release()
+        metadata = request.get_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
+        request.release()
         print(f"[DEBUG] Raw outputs: {outputs}")
 
         if outputs is None or len(outputs) != 4:
