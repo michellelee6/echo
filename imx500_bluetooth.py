@@ -161,9 +161,10 @@ class Detection:
         self.box = imx500.convert_inference_coords(coords, metadata, picam2)
 
 
-def parse_detections(metadata: dict, char: ObjectDetectorCharacteristic):
+def parse_detections(picam2, char: ObjectDetectorCharacteristic):
     print("[DEBUG] Calling parse_detections()")
     while True:
+        metadata = picam2.capture_metadata()
         """Parse the output tensor into a number of detected objects, scaled to the ISP output."""
         global last_detections
         bbox_normalization = intrinsics.bbox_normalization
@@ -347,7 +348,7 @@ if __name__ == "__main__":
     MAIN_LOOP = GLib.MainLoop()
     GLib.timeout_add(100, lambda: True)
 
-    threading.Thread(target=parse_detections, args=(picam2.capture_metadata(), app.services[1]), daemon=True).start()
+    threading.Thread(target=parse_detections, args=(picam2, app.services[1]), daemon=True).start()
 
     MAIN_LOOP.run()
     
