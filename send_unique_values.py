@@ -198,6 +198,7 @@ def load_labels(path):
     print(f"[INFO] Loaded {len(labels)} labels")
     return labels
 
+# Test comment
 def ssd_postprocess(outputs, threshold):
     boxes, classes, scores, num_detections = outputs
     boxes = boxes[0]
