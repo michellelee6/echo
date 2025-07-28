@@ -65,20 +65,6 @@ class ObjectDetectorCharacteristic(dbus.service.Object):
     def PropertiesChanged(self, interface, changed, invalidated):
         pass
 
-    # add flags to prevent pairing (START OF CHANGE)
-    @dbus.service.method('org.freedesktop.DBus.Properties', in_signature='s', out_signature='a{sv}')
-    def GetAll(self, interface):
-        if interface != 'org.bluez.GattCharacteristic1':
-            return {}
-
-        return {
-            'UUID': self.UUID,
-            'Service': dbus.ObjectPath('/org/bluez/example/service0'),
-            'Flags': dbus.Array(['read', 'notify'], signature='s'),
-            'Value': self.value,
-        }
-    # end of change 
-
 # GATT Service
 class ObjectDetectionService(dbus.service.Object):
     PATH = '/org/bluez/example/service0'
