@@ -7,9 +7,8 @@ import RPi.GPIO as GPIO
 SENSORS = {
     0x11: 4,
     0x12: 17,
-    0x13: 27,
     0x14: 22,
-    0x15: 5
+    0x15: 14
 }
 
 # Set up I2C
