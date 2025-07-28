@@ -31,7 +31,7 @@ MAIN_LOOP = None
 # GATT Characteristic
 class ObjectDetectorCharacteristic(dbus.service.Object):
     PATH = '/org/bluez/example/service0/char0'
-    UUID = '12345678-1234-5678-1234-56789abcdef1'
+    UUID = '12345678-1234-5678-1234-56789ABCDEF2'
 
     def __init__(self, bus):
         self.value = []
