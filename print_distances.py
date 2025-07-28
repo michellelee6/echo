@@ -2,7 +2,7 @@ import smbus2
 import time
 
 # TF-Luna I2C addresses
-SENSOR_ADDRESSES = [0x12, 0x13, 0x14]
+SENSOR_ADDRESSES = [0x11, 0x12, 0x13, 0x14, 0x15]
 
 # Bus number (usually 1 on Pi)
 bus = smbus2.SMBus(1)
