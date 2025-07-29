@@ -1,95 +1,82 @@
 import smbus2
 import time
 import RPi.GPIO as GPIO
-import threading
 
-# Constants
-MUX_ADDRESS = 0x70
-SENSOR_ADDRESS = 0x10
-NUM_SENSORS = 5
+MUX_ADDR = 0x70
+TF_LUNA_ADDR = 0x10
+bus = smbus2.SMBus(1)
 
-# Sensor settings per MUX channel
-SENSOR_CONFIG = {
-    0: {"pin": 4, "priority": 15, "normal": 100},
-    1: {"pin": 17, "priority": 15, "normal": 100},
-    2: {"pin": 27, "priority": 15, "normal": 100},
-    3: {"pin": 22, "priority": 15, "normal": 100},
-    4: {"pin": 14, "priority": 15, "normal": 100},
+SENSORS = [
+    {"mux": 0, "gpio": 4},
+    {"mux": 1, "gpio": 17},
+    {"mux": 2, "gpio": 27},
+    {"mux": 3, "gpio": 22},
+    {"mux": 4, "gpio": 14},
+]
+
+THRESHOLDS = {
+    "priority": (0, 15),
+    "tier2": (16, 50),
+    "tier3": (51, 100),
 }
 
-bus = smbus2.SMBus(1)
 GPIO.setmode(GPIO.BCM)
+for s in SENSORS:
+    GPIO.setup(s["gpio"], GPIO.OUT)
+    GPIO.output(s["gpio"], GPIO.LOW)
 
-for config in SENSOR_CONFIG.values():
-    GPIO.setup(config["pin"], GPIO.OUT)
-    GPIO.output(config["pin"], GPIO.LOW)
+def mux_select(channel):
+    bus.write_byte(MUX_ADDR, 1 << channel)
 
-buzzing_flags = {ch: False for ch in SENSOR_CONFIG}
-buzzing_threads = {}
-
-def select_mux_channel(channel):
-    if 0 <= channel <= 7:
-        bus.write_byte(MUX_ADDRESS, 1 << channel)
-        time.sleep(0.001)
-
-def read_distance(channel):
+def read_distance():
     try:
-        select_mux_channel(channel)
-        data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0, 2)
-        return data[0] + (data[1] << 8)
-    except Exception as e:
-        print(f"[CH{channel}] Error: {e}")
+        d = bus.read_i2c_block_data(TF_LUNA_ADDR, 0x00, 9)
+        return d[2] + d[3]*256
+    except:
         return None
 
-def buzz_pattern(channel, pin, distance, priority, normal):
-    while buzzing_flags[channel]:
-        if distance <= priority:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.1)
-        elif distance <= priority * 1.5:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.5)
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.5)
-        elif distance <= normal:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.5)
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(1.0)
-        else:
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.1)
+def get_status(d):
+    if d is None:
+        return None
+    if THRESHOLDS["priority"][0] <= d <= THRESHOLDS["priority"][1]:
+        return "priority"
+    if THRESHOLDS["tier2"][0] <= d <= THRESHOLDS["tier2"][1]:
+        return "tier2"
+    if THRESHOLDS["tier3"][0] <= d <= THRESHOLDS["tier3"][1]:
+        return "tier3"
+    return None
 
-def sensor_loop():
-    while True:
-        for ch in range(NUM_SENSORS):
-            cfg = SENSOR_CONFIG[ch]
-            dist = read_distance(ch)
-            if dist is None:
-                continue
+while True:
+    data = []
+    for s in SENSORS:
+        mux_select(s["mux"])
+        time.sleep(0.01)
+        d = read_distance()
+        status = get_status(d)
+        data.append({"gpio": s["gpio"], "status": status, "dist": d})
 
-            pin = cfg["pin"]
-            priority = cfg["priority"]
-            normal = cfg["normal"]
+    p = [x for x in data if x["status"] == "priority"]
+    if p:
+        for x in data:
+            GPIO.output(x["gpio"], GPIO.HIGH if x in p else GPIO.LOW)
+        continue
 
-            if dist <= normal:
-                if not buzzing_flags[ch]:
-                    buzzing_flags[ch] = True
-                    thread = threading.Thread(target=buzz_pattern, args=(ch, pin, dist, priority, normal))
-                    thread.start()
-                    buzzing_threads[ch] = thread
-            else:
-                if buzzing_flags[ch]:
-                    buzzing_flags[ch] = False
-                    GPIO.output(pin, GPIO.LOW)
+    t2 = [x for x in data if x["status"] == "tier2"]
+    t3 = [x for x in data if x["status"] == "tier3"]
 
-        time.sleep(0.05)
-
-try:
-    sensor_loop()
-except KeyboardInterrupt:
-    print("Stopping...")
-finally:
-    for ch in buzzing_flags:
-        buzzing_flags[ch] = False
-    GPIO.cleanup()
+    active = None
+    if t2:
+        active = min(t2, key=lambda x: x["dist"])
+        GPIO.output(active["gpio"], GPIO.HIGH)
+        time.sleep(0.5)
+        GPIO.output(active["gpio"], GPIO.LOW)
+        time.sleep(0.5)
+    elif t3:
+        active = min(t3, key=lambda x: x["dist"])
+        GPIO.output(active["gpio"], GPIO.HIGH)
+        time.sleep(0.5)
+        GPIO.output(active["gpio"], GPIO.LOW)
+        time.sleep(1)
+    else:
+        for x in data:
+            GPIO.output(x["gpio"], GPIO.LOW)
