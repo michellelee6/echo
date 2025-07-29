@@ -51,12 +51,12 @@ class AutoPairAgent(dbus.service.Object):
     def DisplayPasskey(self, device, passkey, entered):
         print(f"[AGENT] DisplayPasskey {passkey} entered {entered}")
 
-    @dbus.service.method(AGENT_INTERFACE, in_signature="o", out_signature="")
-    def RequestConfirmation(self, device):
-        print(f"[AGENT] Auto-confirming pairing with {device}")
+    @dbus.service.method(AGENT_INTERFACE, in_signature="ou", out_signature="")
+    def RequestConfirmation(self, device, passkey):
+        print(f"[AGENT] Auto-confirming pairing with {device}, passkey: {passkey}")
         return
 
-    @dbus.service.method(AGENT_INTERFACE, in_signature="o", out_signature="")
+    @dbus.service.method(AGENT_INTERFACE, in_signature="os", out_signature="")
     def AuthorizeService(self, device, uuid):
         print(f"[AGENT] AuthorizeService {uuid} on {device}")
         return
