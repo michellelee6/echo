@@ -65,7 +65,7 @@ class AutoPairAgent(dbus.service.Object):
     def Cancel(self):
         print("[AGENT] Cancel")
 
-    def trust_device(bus, device_mac):
+def trust_device(bus, device_mac):
       path = '/org/bluez/hci0/dev_' + device_mac.replace(':', '_')
       try:
           device_obj = bus.get_object(BLUEZ_SERVICE_NAME, path)
