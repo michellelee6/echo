@@ -25,25 +25,25 @@ class Agent(dbus.service.Object):
 
     @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="s")
     def RequestPinCode(self, device):
-        return "0000"  # or your custom PIN
+        return "0000"
 
     @dbus.service.method("org.bluez.Agent1", in_signature="ouq", out_signature="")
     def DisplayPasskey(self, device, passkey, entered):
         pass
 
-    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="")
+    @dbus.service.method("org.bluez.Agent1", in_signature="ou", out_signature="")
     def RequestConfirmation(self, device, passkey):
-        print(f"Auto-confirming passkey: {passkey}")
+        print(f"[Agent] Auto-confirming passkey {passkey} from device {device}")
         return
 
-    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="")
+    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
     def AuthorizeService(self, device, uuid):
         return
 
     @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
     def Cancel(self):
         pass
-
+        
 def register_agent():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
