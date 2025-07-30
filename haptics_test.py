@@ -36,28 +36,32 @@ def main():
         while True:
             distances = []
 
-            # Read all sensor distances
+            print("\n--- Scanning Sensors ---")
             for idx, channel in enumerate(MUX_CHANNELS):
                 select_mux_channel(channel)
                 time.sleep(0.05)
                 dist = read_distance()
                 if dist is not None:
-                    print(f"Sensor {idx} (Ch {channel}): {dist} cm")
+                    print(f"Sensor {idx} (MUX Ch {channel}) → Distance: {dist} cm")
                 else:
-                    print(f"Sensor {idx} (Ch {channel}): Error")
+                    print(f"Sensor {idx} (MUX Ch {channel}) → Read Error")
                     dist = float('inf')
                 distances.append((idx, dist))
 
-            # Find closest sensor under threshold
             close_sensors = [d for d in distances if d[1] <= THRESHOLD_CM]
             if close_sensors:
                 closest_idx = min(close_sensors, key=lambda x: x[1])[0]
+                print(f">>> Activating haptic for Sensor {closest_idx} (GPIO {GPIO_PINS[closest_idx]}) <<<")
             else:
                 closest_idx = None
+                print(">>> No sensors within threshold. All haptics OFF.")
 
             # Set GPIO outputs
             for i, pin in enumerate(GPIO_PINS):
-                GPIO.output(pin, GPIO.HIGH if i == closest_idx else GPIO.LOW)
+                if i == closest_idx:
+                    GPIO.output(pin, GPIO.HIGH)
+                else:
+                    GPIO.output(pin, GPIO.LOW)
 
             time.sleep(0.3)
 
