@@ -3,18 +3,14 @@ import time
 import RPi.GPIO as GPIO
 
 # Constants
-MUX_ADDRESS = 0x70
-SENSOR_ADDRESS = 0x10
-MUX_CHANNELS = [0, 1, 2, 6, 7]
-GPIO_PINS = [4, 17, 27, 22, 14]  # Must match sensor order
-THRESHOLD_CM = 50
+MUX_ADDRESS = 0x70  # Default I2C address for Adafruit TCA9548A
+SENSOR_ADDRESS = 0x10  # TF-Luna I2C address
 
-# Initialize I2C and GPIO
+# Multiplexer channels you want to use (change these if needed)
+MUX_CHANNELS = [6, 7, 0, 1, 2]  # Easily changeable: e.g., [2, 4, 5, 6, 7]
+
+# Initialize I2C bus
 bus = smbus2.SMBus(1)
-GPIO.setmode(GPIO.BCM)
-for pin in GPIO_PINS:
-    GPIO.setup(pin, GPIO.OUT)
-    GPIO.output(pin, GPIO.LOW)
 
 def select_mux_channel(channel):
     if 0 <= channel <= 7:
@@ -27,48 +23,26 @@ def read_distance():
         data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0x00, 9)
         distance = data[0] + (data[1] << 8)
         return distance
-    except:
+    except Exception as e:
+        print(f"I2C read error: {e}")
         return None
 
 def main():
-    last_active_idx = None
-
-    try:
-        while True:
-            distances = []
-
-            for idx, channel in enumerate(MUX_CHANNELS):
-                select_mux_channel(channel)
-                time.sleep(0.05)
-                dist = read_distance()
-                if dist is None:
-                    dist = float('inf')
-                distances.append((idx, dist))
-
-            close_sensors = [d for d in distances if d[1] <= THRESHOLD_CM]
-            if close_sensors:
-                closest_idx = min(close_sensors, key=lambda x: x[1])[0]
+    while True:
+        for idx, channel in enumerate(MUX_CHANNELS):
+            select_mux_channel(channel)
+            time.sleep(0.05)  # Give sensor time to stabilize
+            distance = read_distance()
+            if distance is not None:
+                print(f"Sensor {idx} (MUX channel {channel}): {distance} cm")
+                if distance < 50:
+                    print(f"Haptic {idx} (MUX channel {channel})")
             else:
-                closest_idx = None
-
-            # Set GPIO outputs
-            for i, pin in enumerate(GPIO_PINS):
-                GPIO.output(pin, GPIO.HIGH if i == closest_idx else GPIO.LOW)
-
-            # Only print when there's a change
-            if closest_idx != last_active_idx:
-                if closest_idx is not None:
-                    print(f"Activating haptic on GPIO {GPIO_PINS[closest_idx]}")
-                else:
-                    print("No sensors within threshold. All haptics OFF.")
-                last_active_idx = closest_idx
-
-            time.sleep(0.3)
-
-    except KeyboardInterrupt:
-        print("Stopping...")
-    finally:
-        GPIO.cleanup()
+                print(f"Sensor {idx} (MUX channel {channel}): Read error")
+        time.sleep(0.5)  # Delay between sensor rounds
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Stopping program.")
