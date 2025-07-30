@@ -2,81 +2,96 @@ import smbus2
 import time
 import RPi.GPIO as GPIO
 
-MUX_ADDR = 0x70
-TF_LUNA_ADDR = 0x10
+# Setup
 bus = smbus2.SMBus(1)
+MULTIPLEXER_ADDR = 0x70
+SENSOR_ADDR = 0x10
+SENSOR_CHANNELS = [0, 1, 2, 3, 4]
 
-SENSORS = [
-    {"mux": 0, "gpio": 4},
-    {"mux": 1, "gpio": 17},
-    {"mux": 2, "gpio": 27},
-    {"mux": 3, "gpio": 22},
-    {"mux": 4, "gpio": 14},
-]
+SENSOR_GPIO = {
+    0: 4,
+    1: 17,
+    2: 27,
+    3: 22,
+    4: 5
+}
 
 THRESHOLDS = {
     "priority": (0, 15),
-    "tier2": (16, 50),
-    "tier3": (51, 100),
+    "mid": (16, 50),
+    "low": (51, 100)
 }
 
 GPIO.setmode(GPIO.BCM)
-for s in SENSORS:
-    GPIO.setup(s["gpio"], GPIO.OUT)
-    GPIO.output(s["gpio"], GPIO.LOW)
+for pin in SENSOR_GPIO.values():
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, GPIO.LOW)
 
-def mux_select(channel):
-    bus.write_byte(MUX_ADDR, 1 << channel)
-
-def read_distance():
-    try:
-        d = bus.read_i2c_block_data(TF_LUNA_ADDR, 0x00, 9)
-        return d[2] + d[3]*256
-    except:
-        return None
-
-def get_status(d):
-    if d is None:
-        return None
-    if THRESHOLDS["priority"][0] <= d <= THRESHOLDS["priority"][1]:
-        return "priority"
-    if THRESHOLDS["tier2"][0] <= d <= THRESHOLDS["tier2"][1]:
-        return "tier2"
-    if THRESHOLDS["tier3"][0] <= d <= THRESHOLDS["tier3"][1]:
-        return "tier3"
-    return None
-
-while True:
-    data = []
-    for s in SENSORS:
-        mux_select(s["mux"])
-        time.sleep(0.01)
-        d = read_distance()
-        status = get_status(d)
-        data.append({"gpio": s["gpio"], "status": status, "dist": d})
-
-    p = [x for x in data if x["status"] == "priority"]
-    if p:
-        for x in data:
-            GPIO.output(x["gpio"], GPIO.HIGH if x in p else GPIO.LOW)
-        continue
-
-    t2 = [x for x in data if x["status"] == "tier2"]
-    t3 = [x for x in data if x["status"] == "tier3"]
-
-    active = None
-    if t2:
-        active = min(t2, key=lambda x: x["dist"])
-        GPIO.output(active["gpio"], GPIO.HIGH)
-        time.sleep(0.5)
-        GPIO.output(active["gpio"], GPIO.LOW)
-        time.sleep(0.5)
-    elif t3:
-        active = min(t3, key=lambda x: x["dist"])
-        GPIO.output(active["gpio"], GPIO.HIGH)
-        time.sleep(0.5)
-        GPIO.output(active["gpio"], GPIO.LOW)
-        time.sleep(1)
+def select_mux_channel(channel):
+    if 0 <= channel <= 7:
+        bus.write_byte(MULTIPLEXER_ADDR, 1 << channel)
     else:
-        for x in data:
-            GPIO.output(x["gpio"], GPIO.LOW)
+        raise ValueError("Invalid channel")
+
+def read_distance(channel):
+    try:
+        select_mux_channel(channel)
+        time.sleep(0.001)
+        data = bus.read_i2c_block_data(SENSOR_ADDR, 0, 9)
+        distance = data[0] + (data[1] << 8)
+        print(f"Sensor {channel}: Distance = {distance}")  # <-- DEBUG PRINT
+        return distance
+    except Exception as e:
+        print(f"Error reading sensor {channel}: {e}")
+        return None
+
+def sensor_control_loop():
+    while True:
+        results = []
+
+        for ch in SENSOR_CHANNELS:
+            dist = read_distance(ch)
+            if dist is not None:
+                results.append((ch, dist))
+
+        priority = []
+        mid = []
+        low = []
+
+        for ch, dist in results:
+            if THRESHOLDS["priority"][0] <= dist <= THRESHOLDS["priority"][1]:
+                priority.append((ch, dist))
+            elif THRESHOLDS["mid"][0] <= dist <= THRESHOLDS["mid"][1]:
+                mid.append((ch, dist))
+            elif THRESHOLDS["low"][0] <= dist <= THRESHOLDS["low"][1]:
+                low.append((ch, dist))
+
+        for pin in SENSOR_GPIO.values():
+            GPIO.output(pin, GPIO.LOW)
+
+        if priority:
+            for ch, _ in priority:
+                GPIO.output(SENSOR_GPIO[ch], GPIO.HIGH)
+            time.sleep(0.1)
+            continue
+        elif mid:
+            ch, _ = min(mid, key=lambda x: x[1])
+            GPIO.output(SENSOR_GPIO[ch], GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(SENSOR_GPIO[ch], GPIO.LOW)
+            time.sleep(0.5)
+        elif low:
+            ch, _ = min(low, key=lambda x: x[1])
+            GPIO.output(SENSOR_GPIO[ch], GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(SENSOR_GPIO[ch], GPIO.LOW)
+            time.sleep(1.0)
+        else:
+            time.sleep(0.1)
+
+try:
+    sensor_control_loop()
+except KeyboardInterrupt:
+    print("Stopped by user.")
+finally:
+    GPIO.cleanup()
