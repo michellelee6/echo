@@ -5,8 +5,8 @@ import RPi.GPIO as GPIO
 # Constants
 MUX_ADDRESS = 0x70
 SENSOR_ADDRESS = 0x10
-MUX_CHANNELS = [0, 1, 2, 3, 4]
-GPIO_PINS = [4, 17, 27, 22, 5]  # Must match sensor order
+MUX_CHANNELS = [0, 1, 2, 6, 7]
+GPIO_PINS = [4, 17, 27, 22, 14]  # Must match sensor order
 THRESHOLD_CM = 50
 
 # Initialize I2C and GPIO
