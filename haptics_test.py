@@ -1,110 +1,70 @@
 import smbus2
 import time
 import RPi.GPIO as GPIO
-import threading
 
 # Constants
 MUX_ADDRESS = 0x70
 SENSOR_ADDRESS = 0x10
+MUX_CHANNELS = [0, 1, 2, 3, 4]
+GPIO_PINS = [4, 17, 27, 22, 5]  # Must match sensor order
+THRESHOLD_CM = 50
 
-# Sensor configuration: MUX channel -> {GPIO pin, priority threshold, normal threshold}
-SENSOR_CONFIG = {
-    6: {"pin": 4, "priority": 15, "normal": 100},
-    7: {"pin": 17, "priority": 15, "normal": 100},
-    0: {"pin": 27, "priority": 15, "normal": 100},
-    1: {"pin": 22, "priority": 15, "normal": 100},
-    2: {"pin": 14, "priority": 15, "normal": 100},
-}
-
+# Initialize I2C and GPIO
 bus = smbus2.SMBus(1)
 GPIO.setmode(GPIO.BCM)
-
-# Setup GPIO pins
-for cfg in SENSOR_CONFIG.values():
-    GPIO.setup(cfg["pin"], GPIO.OUT)
-    GPIO.output(cfg["pin"], GPIO.LOW)
-
-# Threading and control structures
-buzzing_flags = {ch: False for ch in SENSOR_CONFIG}
-buzzing_threads = {}
-distance_lock = threading.Lock()
-latest_distances = {ch: 9999 for ch in SENSOR_CONFIG}
+for pin in GPIO_PINS:
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, GPIO.LOW)
 
 def select_mux_channel(channel):
     if 0 <= channel <= 7:
         bus.write_byte(MUX_ADDRESS, 1 << channel)
-        time.sleep(0.01)
+    else:
+        raise ValueError("MUX channel must be between 0 and 7")
 
-def read_distance(channel):
+def read_distance():
     try:
-        select_mux_channel(channel)
-        data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0, 2)
-        print(data)
-        return data[0] + (data[1] << 8)
+        data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0x00, 9)
+        distance = data[0] + (data[1] << 8)
+        return distance
     except Exception as e:
-        print(f"[CH{channel}] Error: {e}")
+        print(f"I2C read error: {e}")
         return None
 
-def buzz_pattern(channel, pin, priority, normal):
-    while buzzing_flags[channel]:
-        with distance_lock:
-            distance = latest_distances[channel]
+def main():
+    try:
+        while True:
+            distances = []
 
-        if distance <= priority:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.1)
-            print("buzzing")
-        elif distance <= priority * 1.5:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.5)
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.5)
-            print("buzzing")
-        elif distance <= normal:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.5)
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(1.0)
-            print("buzzing")
-        else:
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.2)
-            print("buzzing")
+            # Read all sensor distances
+            for idx, channel in enumerate(MUX_CHANNELS):
+                select_mux_channel(channel)
+                time.sleep(0.05)
+                dist = read_distance()
+                if dist is not None:
+                    print(f"Sensor {idx} (Ch {channel}): {dist} cm")
+                else:
+                    print(f"Sensor {idx} (Ch {channel}): Error")
+                    dist = float('inf')
+                distances.append((idx, dist))
 
-def sensor_loop():
-    while True:
-        for ch, cfg in SENSOR_CONFIG.items():
-            dist = read_distance(ch)
-            if dist is None:
-                continue
-
-            # Update latest distance
-            with distance_lock:
-                latest_distances[ch] = dist
-
-            pin = cfg["pin"]
-            priority = cfg["priority"]
-            normal = cfg["normal"]
-
-            if dist <= normal:
-                if not buzzing_flags[ch]:
-                    buzzing_flags[ch] = True
-                    thread = threading.Thread(target=buzz_pattern, args=(ch, pin, priority, normal))
-                    thread.start()
-                    buzzing_threads[ch] = thread
+            # Find closest sensor under threshold
+            close_sensors = [d for d in distances if d[1] <= THRESHOLD_CM]
+            if close_sensors:
+                closest_idx = min(close_sensors, key=lambda x: x[1])[0]
             else:
-                if buzzing_flags[ch]:
-                    buzzing_flags[ch] = False
-                    GPIO.output(pin, GPIO.LOW)
+                closest_idx = None
 
-        time.sleep(0.05)
+            # Set GPIO outputs
+            for i, pin in enumerate(GPIO_PINS):
+                GPIO.output(pin, GPIO.HIGH if i == closest_idx else GPIO.LOW)
 
-try:
-    sensor_loop()
-except KeyboardInterrupt:
-    print("Stopping...")
-finally:
-    for ch in buzzing_flags:
-        buzzing_flags[ch] = False
-    time.sleep(1)  # Allow threads to exit
-    GPIO.cleanup()
+            time.sleep(0.3)
+
+    except KeyboardInterrupt:
+        print("Stopping...")
+    finally:
+        GPIO.cleanup()
+
+if __name__ == "__main__":
+    main()
