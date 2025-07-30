@@ -12,7 +12,7 @@ NUM_SENSORS = 5
 SENSOR_CONFIG = {
     6: {"pin": 4, "priority": 15, "normal": 100},
     7: {"pin": 17, "priority": 15, "normal": 100},
-    0: {"pin": 27, "priority": 15, "normal": 100},
+    3: {"pin": 27, "priority": 15, "normal": 100},
     1: {"pin": 22, "priority": 15, "normal": 100},
     2: {"pin": 14, "priority": 15, "normal": 100},
 }
