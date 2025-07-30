@@ -6,9 +6,8 @@ import threading
 # Constants
 MUX_ADDRESS = 0x70
 SENSOR_ADDRESS = 0x10
-NUM_SENSORS = 5
 
-# Sensor settings per MUX channel
+# Sensor configuration: MUX channel -> {GPIO pin, priority threshold, normal threshold}
 SENSOR_CONFIG = {
     6: {"pin": 4, "priority": 15, "normal": 100},
     7: {"pin": 17, "priority": 15, "normal": 100},
@@ -20,17 +19,21 @@ SENSOR_CONFIG = {
 bus = smbus2.SMBus(1)
 GPIO.setmode(GPIO.BCM)
 
-for config in SENSOR_CONFIG.values():
-    GPIO.setup(config["pin"], GPIO.OUT)
-    GPIO.output(config["pin"], GPIO.LOW)
+# Setup GPIO pins
+for cfg in SENSOR_CONFIG.values():
+    GPIO.setup(cfg["pin"], GPIO.OUT)
+    GPIO.output(cfg["pin"], GPIO.LOW)
 
+# Threading and control structures
 buzzing_flags = {ch: False for ch in SENSOR_CONFIG}
 buzzing_threads = {}
+distance_lock = threading.Lock()
+latest_distances = {ch: 9999 for ch in SENSOR_CONFIG}
 
 def select_mux_channel(channel):
     if 0 <= channel <= 7:
         bus.write_byte(MUX_ADDRESS, 1 << channel)
-        time.sleep(0.001)
+        time.sleep(0.01)
 
 def read_distance(channel):
     try:
@@ -41,8 +44,11 @@ def read_distance(channel):
         print(f"[CH{channel}] Error: {e}")
         return None
 
-def buzz_pattern(channel, pin, distance, priority, normal):
+def buzz_pattern(channel, pin, priority, normal):
     while buzzing_flags[channel]:
+        with distance_lock:
+            distance = latest_distances[channel]
+
         if distance <= priority:
             GPIO.output(pin, GPIO.HIGH)
             time.sleep(0.1)
@@ -58,15 +64,18 @@ def buzz_pattern(channel, pin, distance, priority, normal):
             time.sleep(1.0)
         else:
             GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.1)
+            time.sleep(0.2)
 
 def sensor_loop():
     while True:
-        for ch in range(NUM_SENSORS):
-            cfg = SENSOR_CONFIG[ch]
+        for ch, cfg in SENSOR_CONFIG.items():
             dist = read_distance(ch)
             if dist is None:
                 continue
+
+            # Update latest distance
+            with distance_lock:
+                latest_distances[ch] = dist
 
             pin = cfg["pin"]
             priority = cfg["priority"]
@@ -75,7 +84,7 @@ def sensor_loop():
             if dist <= normal:
                 if not buzzing_flags[ch]:
                     buzzing_flags[ch] = True
-                    thread = threading.Thread(target=buzz_pattern, args=(ch, pin, dist, priority, normal))
+                    thread = threading.Thread(target=buzz_pattern, args=(ch, pin, priority, normal))
                     thread.start()
                     buzzing_threads[ch] = thread
             else:
@@ -92,4 +101,5 @@ except KeyboardInterrupt:
 finally:
     for ch in buzzing_flags:
         buzzing_flags[ch] = False
+    time.sleep(1)  # Allow threads to exit
     GPIO.cleanup()
