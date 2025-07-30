@@ -13,7 +13,7 @@ SENSOR_GPIO = {
     1: 17,
     2: 27,
     3: 22,
-    4: 5
+    4: 14
 }
 
 THRESHOLDS = {
