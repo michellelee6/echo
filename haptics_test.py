@@ -1,45 +1,95 @@
 import smbus2
 import time
+import RPi.GPIO as GPIO
+import threading
 
 # Constants
-MUX_ADDRESS = 0x70  # Default I2C address for Adafruit TCA9548A
-SENSOR_ADDRESS = 0x10  # TF-Luna I2C address
+MUX_ADDRESS = 0x70
+SENSOR_ADDRESS = 0x10
+NUM_SENSORS = 5
 
-# Multiplexer channels you want to use (change these if needed)
-MUX_CHANNELS = [6, 7, 0, 1, 2]  # Easily changeable: e.g., [2, 4, 5, 6, 7]
+# Sensor settings per MUX channel
+SENSOR_CONFIG = {
+    6: {"pin": 4, "priority": 15, "normal": 100},
+    7: {"pin": 17, "priority": 15, "normal": 100},
+    0: {"pin": 27, "priority": 15, "normal": 100},
+    1: {"pin": 22, "priority": 15, "normal": 100},
+    2: {"pin": 14, "priority": 15, "normal": 100},
+}
 
-# Initialize I2C bus
 bus = smbus2.SMBus(1)
+GPIO.setmode(GPIO.BCM)
+
+for config in SENSOR_CONFIG.values():
+    GPIO.setup(config["pin"], GPIO.OUT)
+    GPIO.output(config["pin"], GPIO.LOW)
+
+buzzing_flags = {ch: False for ch in SENSOR_CONFIG}
+buzzing_threads = {}
 
 def select_mux_channel(channel):
     if 0 <= channel <= 7:
         bus.write_byte(MUX_ADDRESS, 1 << channel)
-    else:
-        raise ValueError("MUX channel must be between 0 and 7")
+        time.sleep(0.001)
 
-def read_distance():
+def read_distance(channel):
     try:
-        data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0x00, 9)
-        distance = data[0] + (data[1] << 8)
-        return distance
+        select_mux_channel(channel)
+        data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0, 2)
+        return data[0] + (data[1] << 8)
     except Exception as e:
-        print(f"I2C read error: {e}")
+        print(f"[CH{channel}] Error: {e}")
         return None
 
-def main():
-    while True:
-        for idx, channel in enumerate(MUX_CHANNELS):
-            select_mux_channel(channel)
-            time.sleep(0.05)  # Give sensor time to stabilize
-            distance = read_distance()
-            if distance is not None:
-                print(f"Sensor {idx} (MUX channel {channel}): {distance} cm")
-            else:
-                print(f"Sensor {idx} (MUX channel {channel}): Read error")
-        time.sleep(0.5)  # Delay between sensor rounds
+def buzz_pattern(channel, pin, distance, priority, normal):
+    while buzzing_flags[channel]:
+        if distance <= priority:
+            GPIO.output(pin, GPIO.HIGH)
+            time.sleep(0.1)
+        elif distance <= priority * 1.5:
+            GPIO.output(pin, GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(pin, GPIO.LOW)
+            time.sleep(0.5)
+        elif distance <= normal:
+            GPIO.output(pin, GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(pin, GPIO.LOW)
+            time.sleep(1.0)
+        else:
+            GPIO.output(pin, GPIO.LOW)
+            time.sleep(0.1)
 
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("Stopping program.")
+def sensor_loop():
+    while True:
+        for ch in range(NUM_SENSORS):
+            cfg = SENSOR_CONFIG[ch]
+            dist = read_distance(ch)
+            if dist is None:
+                continue
+
+            pin = cfg["pin"]
+            priority = cfg["priority"]
+            normal = cfg["normal"]
+
+            if dist <= normal:
+                if not buzzing_flags[ch]:
+                    buzzing_flags[ch] = True
+                    thread = threading.Thread(target=buzz_pattern, args=(ch, pin, dist, priority, normal))
+                    thread.start()
+                    buzzing_threads[ch] = thread
+            else:
+                if buzzing_flags[ch]:
+                    buzzing_flags[ch] = False
+                    GPIO.output(pin, GPIO.LOW)
+
+        time.sleep(0.05)
+
+try:
+    sensor_loop()
+except KeyboardInterrupt:
+    print("Stopping...")
+finally:
+    for ch in buzzing_flags:
+        buzzing_flags[ch] = False
+    GPIO.cleanup()
