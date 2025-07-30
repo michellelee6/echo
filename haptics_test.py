@@ -6,7 +6,7 @@ MUX_ADDRESS = 0x70  # Default I2C address for Adafruit TCA9548A
 SENSOR_ADDRESS = 0x10  # TF-Luna I2C address
 
 # Multiplexer channels you want to use (change these if needed)
-MUX_CHANNELS = [0, 1, 2, 3, 4]  # Easily changeable: e.g., [2, 4, 5, 6, 7]
+MUX_CHANNELS = [6, 7, 0, 1, 2]  # Easily changeable: e.g., [2, 4, 5, 6, 7]
 
 # Initialize I2C bus
 bus = smbus2.SMBus(1)
