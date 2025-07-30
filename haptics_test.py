@@ -39,6 +39,7 @@ def read_distance(channel):
     try:
         select_mux_channel(channel)
         data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0, 2)
+        print(data)
         return data[0] + (data[1] << 8)
     except Exception as e:
         print(f"[CH{channel}] Error: {e}")
@@ -52,19 +53,23 @@ def buzz_pattern(channel, pin, priority, normal):
         if distance <= priority:
             GPIO.output(pin, GPIO.HIGH)
             time.sleep(0.1)
+            print("buzzing")
         elif distance <= priority * 1.5:
             GPIO.output(pin, GPIO.HIGH)
             time.sleep(0.5)
             GPIO.output(pin, GPIO.LOW)
             time.sleep(0.5)
+            print("buzzing")
         elif distance <= normal:
             GPIO.output(pin, GPIO.HIGH)
             time.sleep(0.5)
             GPIO.output(pin, GPIO.LOW)
             time.sleep(1.0)
+            print("buzzing")
         else:
             GPIO.output(pin, GPIO.LOW)
             time.sleep(0.2)
+            print("buzzing")
 
 def sensor_loop():
     while True:
