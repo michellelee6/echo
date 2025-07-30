@@ -27,41 +27,41 @@ def read_distance():
         data = bus.read_i2c_block_data(SENSOR_ADDRESS, 0x00, 9)
         distance = data[0] + (data[1] << 8)
         return distance
-    except Exception as e:
-        print(f"I2C read error: {e}")
+    except:
         return None
 
 def main():
+    last_active_idx = None
+
     try:
         while True:
             distances = []
 
-            print("\n--- Scanning Sensors ---")
             for idx, channel in enumerate(MUX_CHANNELS):
                 select_mux_channel(channel)
                 time.sleep(0.05)
                 dist = read_distance()
-                if dist is not None:
-                    print(f"Sensor {idx} (MUX Ch {channel}) → Distance: {dist} cm")
-                else:
-                    print(f"Sensor {idx} (MUX Ch {channel}) → Read Error")
+                if dist is None:
                     dist = float('inf')
                 distances.append((idx, dist))
 
             close_sensors = [d for d in distances if d[1] <= THRESHOLD_CM]
             if close_sensors:
                 closest_idx = min(close_sensors, key=lambda x: x[1])[0]
-                print(f">>> Activating haptic for Sensor {closest_idx} (GPIO {GPIO_PINS[closest_idx]}) <<<")
             else:
                 closest_idx = None
-                print(">>> No sensors within threshold. All haptics OFF.")
 
             # Set GPIO outputs
             for i, pin in enumerate(GPIO_PINS):
-                if i == closest_idx:
-                    GPIO.output(pin, GPIO.HIGH)
+                GPIO.output(pin, GPIO.HIGH if i == closest_idx else GPIO.LOW)
+
+            # Only print when there's a change
+            if closest_idx != last_active_idx:
+                if closest_idx is not None:
+                    print(f"Activating haptic on GPIO {GPIO_PINS[closest_idx]}")
                 else:
-                    GPIO.output(pin, GPIO.LOW)
+                    print("No sensors within threshold. All haptics OFF.")
+                last_active_idx = closest_idx
 
             time.sleep(0.3)
 
