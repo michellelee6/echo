@@ -1,6 +1,3 @@
-# Combined script with preview off and print statements removed
-# NOTE: Only core BLE and error-related prints remain
-
 import argparse
 import sys
 import threading
@@ -17,10 +14,10 @@ from gi.repository import GLib
 
 from picamera2 import MappedArray, Picamera2
 from picamera2.devices import IMX500
-from picamera2.devices.imx500 import (NetworkIntrinsics, postprocess_nanodet_detection)
+from picamera2.devices.imx500 import NetworkIntrinsics, postprocess_nanodet_detection
 
 ############################################################
-# Bluetooth Auto-Pairing Agent
+# Bluetooth Auto-Pairing Agent with Auto-Trust
 ############################################################
 
 AGENT_PATH = "/test/agent"
@@ -28,25 +25,40 @@ AGENT_PATH = "/test/agent"
 class Rejected(dbus.DBusException):
     _dbus_error_name = "org.bluez.Error.Rejected"
 
+def trust_device(device_path):
+    props = dbus.Interface(bus.get_object("org.bluez", device_path), "org.freedesktop.DBus.Properties")
+    props.Set("org.bluez.Device1", "Trusted", dbus.Boolean(True))
+
 class Agent(dbus.service.Object):
     @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
     def Release(self): pass
 
     @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="")
-    def RequestAuthorization(self, device): return
+    def RequestAuthorization(self, device):
+        print(f"Authorizing device: {device}")
+        trust_device(device)
+        return
 
     @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
-    def DisplayPinCode(self, device, pincode): pass
+    def AuthorizeService(self, device, uuid):
+        print(f"Authorizing service for device: {device}, uuid: {uuid}")
+        trust_device(device)
+        return
 
     @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="s")
     def RequestPinCode(self, device):
+        print(f"RequestPinCode for {device}")
+        trust_device(device)
         return "0000"
 
     @dbus.service.method("org.bluez.Agent1", in_signature="ou", out_signature="")
-    def RequestConfirmation(self, device, passkey): return
+    def RequestConfirmation(self, device, passkey):
+        print(f"RequestConfirmation for {device}, passkey: {passkey}")
+        trust_device(device)
+        return
 
     @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
-    def AuthorizeService(self, device, uuid): return
+    def DisplayPinCode(self, device, pincode): pass
 
     @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
     def Cancel(self): pass
