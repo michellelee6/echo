@@ -12,7 +12,7 @@ MUX_CHANNELS = [6, 7, 0, 1, 2]  # Sensors 0–4
 # Right side: GPIO 27, GPIO 22
 HAPTIC_PINS = [5, 6, 27, 22]
 
-THRESHOLD_CM = 50
+THRESHOLD_CM = 65
 
 # Init I2C and GPIO
 bus = smbus2.SMBus(1)
