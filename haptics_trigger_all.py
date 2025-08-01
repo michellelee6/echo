@@ -5,14 +5,19 @@ import RPi.GPIO as GPIO
 # Constants
 MUX_ADDRESS = 0x70
 SENSOR_ADDRESS = 0x10
-MUX_CHANNELS = [6, 7, 0, 1, 2]
-GPIO_PINS = [4, 17, 27, 22, 5]  # GPIO pins for sensors 0–4
+MUX_CHANNELS = [6, 7, 0, 1, 2]  # Sensors 0–4
+
+# New GPIO pin configuration for haptics
+# Left side: GPIO 5, GPIO 6
+# Right side: GPIO 27, GPIO 22
+HAPTIC_PINS = [5, 6, 27, 22]
+
 THRESHOLD_CM = 50
 
 # Init I2C and GPIO
 bus = smbus2.SMBus(1)
 GPIO.setmode(GPIO.BCM)
-for pin in GPIO_PINS:
+for pin in HAPTIC_PINS:
     GPIO.setup(pin, GPIO.OUT)
     GPIO.output(pin, GPIO.LOW)
 
@@ -35,7 +40,6 @@ def main():
         while True:
             distances = []
             haptics = []
-            middle_sensor_triggered = False
 
             for idx, channel in enumerate(MUX_CHANNELS):
                 select_mux_channel(channel)
@@ -47,34 +51,42 @@ def main():
                     print(f"Sensor {idx} (MUX {channel}): {distance} cm")
                     if distance < THRESHOLD_CM:
                         haptics.append((idx, channel, distance))
-                        if idx == 2:  # Middle sensor
-                            middle_sensor_triggered = True
                 else:
                     print(f"Sensor {idx} (MUX {channel}): Read error")
 
             print("---")
 
-            if middle_sensor_triggered:
-                # Trigger all 4 haptics if middle sensor detects something close
-                for pin in GPIO_PINS[:4]:
-                    GPIO.output(pin, GPIO.HIGH)
-                print(">>> Middle sensor triggered: ALL haptics ON")
-            elif haptics:
-                # Find closest sensor (among indices 0-3 only)
+            # Determine and activate the closest haptic
+            if haptics:
                 closest = min(haptics, key=lambda x: x[2])
                 closest_idx = closest[0]
 
-                # Only activate haptic if within available 4
-                for i, pin in enumerate(GPIO_PINS[:4]):
-                    GPIO.output(pin, GPIO.HIGH if i == closest_idx else GPIO.LOW)
+                # Map sensor index to haptic motor:
+                # Sensor 0, 1 → Left (GPIO 5, 6)
+                # Sensor 2, 3 → Right (GPIO 27, 22)
+                # Sensor 4 (middle) → trigger both left and right
 
-                if closest_idx < 4:
-                    print(f">>> Haptic triggered: Sensor {closest_idx} at {closest[2]} cm")
-                else:
-                    print(f">>> Closest is sensor {closest_idx}, but no haptic assigned")
+                for pin in HAPTIC_PINS:
+                    GPIO.output(pin, GPIO.LOW)  # Turn all off initially
+
+                if closest_idx == 0:
+                    GPIO.output(5, GPIO.HIGH)
+                elif closest_idx == 1:
+                    GPIO.output(6, GPIO.HIGH)
+                elif closest_idx == 2:
+                    GPIO.output(27, GPIO.HIGH)
+                elif closest_idx == 3:
+                    GPIO.output(22, GPIO.HIGH)
+                elif closest_idx == 4:
+                    # Middle sensor → activate all
+                    for pin in HAPTIC_PINS:
+                        GPIO.output(pin, GPIO.HIGH)
+
+                print(f">>> Haptic triggered by Sensor {closest_idx} at {closest[2]} cm")
+
             else:
-                # No detection — turn all haptics off
-                for pin in GPIO_PINS[:4]:
+                # No haptics triggered
+                for pin in HAPTIC_PINS:
                     GPIO.output(pin, GPIO.LOW)
 
             time.sleep(0.5)
