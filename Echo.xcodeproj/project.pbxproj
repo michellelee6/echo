@@ -24,15 +24,28 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A90E08392E32A6B50027F4AD /* EchoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EchoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A90E08392E32A6B50027F4AD /* Echo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Echo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90E08462E32A6B70027F4AD /* EchoAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EchoAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90E08502E32A6B70027F4AD /* EchoAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EchoAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A90E09992E3549790027F4AD /* Exceptions for "Echo" folder in "EchoApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A90E08382E32A6B50027F4AD /* EchoApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A90E083B2E32A6B50027F4AD /* EchoApp */ = {
+		A90E083B2E32A6B50027F4AD /* Echo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = EchoApp;
+			exceptions = (
+				A90E09992E3549790027F4AD /* Exceptions for "Echo" folder in "EchoApp" target */,
+			);
+			path = Echo;
 			sourceTree = "<group>";
 		};
 		A90E08492E32A6B70027F4AD /* EchoAppTests */ = {
@@ -75,7 +88,7 @@
 		A90E08302E32A6B50027F4AD = {
 			isa = PBXGroup;
 			children = (
-				A90E083B2E32A6B50027F4AD /* EchoApp */,
+				A90E083B2E32A6B50027F4AD /* Echo */,
 				A90E08492E32A6B70027F4AD /* EchoAppTests */,
 				A90E08532E32A6B70027F4AD /* EchoAppUITests */,
 				A90E083A2E32A6B50027F4AD /* Products */,
@@ -85,7 +98,7 @@
 		A90E083A2E32A6B50027F4AD /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A90E08392E32A6B50027F4AD /* EchoApp.app */,
+				A90E08392E32A6B50027F4AD /* Echo.app */,
 				A90E08462E32A6B70027F4AD /* EchoAppTests.xctest */,
 				A90E08502E32A6B70027F4AD /* EchoAppUITests.xctest */,
 			);
@@ -108,13 +121,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A90E083B2E32A6B50027F4AD /* EchoApp */,
+				A90E083B2E32A6B50027F4AD /* Echo */,
 			);
 			name = EchoApp;
 			packageProductDependencies = (
 			);
 			productName = EchoApp;
-			productReference = A90E08392E32A6B50027F4AD /* EchoApp.app */;
+			productReference = A90E08392E32A6B50027F4AD /* Echo.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A90E08452E32A6B70027F4AD /* EchoAppTests */ = {
@@ -186,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A90E08342E32A6B50027F4AD /* Build configuration list for PBXProject "EchoApp" */;
+			buildConfigurationList = A90E08342E32A6B50027F4AD /* Build configuration list for PBXProject "Echo" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -393,10 +406,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Echo/Echo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3674R8NU4L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Echo/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -407,8 +425,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.michellelee.EchoApp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				NEW_SETTING = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michellelee.Echo;
+				PRODUCT_NAME = Echo;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -420,10 +439,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Echo/Echo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3674R8NU4L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Echo/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -434,8 +458,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.michellelee.EchoApp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				NEW_SETTING = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michellelee.Echo;
+				PRODUCT_NAME = Echo;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -513,7 +538,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A90E08342E32A6B50027F4AD /* Build configuration list for PBXProject "EchoApp" */ = {
+		A90E08342E32A6B50027F4AD /* Build configuration list for PBXProject "Echo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A90E08582E32A6B70027F4AD /* Debug */,

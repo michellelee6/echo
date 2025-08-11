@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import EchoApp
+@testable import Echo
 
 struct EchoAppTests {
 
